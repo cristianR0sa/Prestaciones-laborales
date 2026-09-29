@@ -4,80 +4,73 @@ import {
   Calendar, 
   Plus, 
   Trash2, 
-  CheckCircle2, 
-  XCircle, 
-  AlertTriangle,
-  Info,
-  Clock,
-  Sun,
-  Moon,
-  Sparkles
+  AlertTriangle
 } from 'lucide-react';
-import { EmployeeData, CalculationResult, OvertimeEntry } from '../types';
-import { OFFICIAL_HOLIDAYS } from '../constants/holidays';
-import { calculateOvertimeType, formatCurrency } from '../utils/calculator';
+import { DatosEmpleado, ResultadoLiquidacion, RegistroHoraExtra } from '../types';
+import { DIAS_ASUETO_OFICIALES } from '../constants/holidays';
+import { deducirTipoHoraExtra, formatearMoneda } from '../utils/calculator';
 
-interface LaborFormProps {
-  data: EmployeeData;
-  results: CalculationResult;
-  onChange: (fields: Partial<EmployeeData>) => void;
-  onCalculate: () => void;
-  onReset: () => void;
+interface PropsFormularioLaboral {
+  datos: DatosEmpleado;
+  resultados: ResultadoLiquidacion;
+  alCambiar: (campos: Partial<DatosEmpleado>) => void;
+  alCalcular: () => void;
+  alLimpiar: () => void;
 }
 
-export const LaborForm: React.FC<LaborFormProps> = ({
-  data,
-  results,
-  onChange,
-  onCalculate,
-  onReset
+export const LaborForm: React.FC<PropsFormularioLaboral> = ({
+  datos,
+  resultados,
+  alCambiar,
+  alCalcular,
+  alLimpiar
 }) => {
-  // Modal / Form state for Overtime
-  const [showOvertimeModal, setShowOvertimeModal] = useState(false);
-  const [otDate, setOtDate] = useState<string>(data.endDate || new Date().toISOString().slice(0, 10));
-  const [otStartTime, setOtStartTime] = useState<string>('17:00');
-  const [otEndTime, setOtEndTime] = useState<string>('21:00');
+  // Estado modal de Horas Extras
+  const [mostrarModalHorasExtras, setMostrarModalHorasExtras] = useState(false);
+  const [fechaHE, setFechaHE] = useState<string>(datos.fechaFin || new Date().toISOString().slice(0, 10));
+  const [horaInicioHE, setHoraInicioHE] = useState<string>('17:00');
+  const [horaFinHE, setHoraFinHE] = useState<string>('21:00');
 
-  const previewOt = calculateOvertimeType(otStartTime, otEndTime);
-  const hourlyRate = results.hourlySalary || (Number(data.salary) / 30 / 8);
-  const previewAmount = (previewOt.diurnasHours * hourlyRate * 2.0) + (previewOt.nocturnasHours * hourlyRate * 2.5);
+  const vistaPreviaHE = deducirTipoHoraExtra(horaInicioHE, horaFinHE);
+  const tarifaPorHora = resultados.salarioPorHora || (Number(datos.salarioMensual) / 30 / 8);
+  const montoVistaPreviaHE = (vistaPreviaHE.horasDiurnas * tarifaPorHora * 2.0) + (vistaPreviaHE.horasNocturnas * tarifaPorHora * 2.5);
 
-  const handleAddOvertime = () => {
-    if (!otStartTime || !otEndTime || previewOt.totalHours <= 0) return;
+  const agregarHoraExtra = () => {
+    if (!horaInicioHE || !horaFinHE || vistaPreviaHE.horasTotales <= 0) return;
 
-    const newEntry: OvertimeEntry = {
+    const nuevoRegistro: RegistroHoraExtra = {
       id: Math.random().toString(36).substring(2, 9),
-      date: otDate,
-      startTime: otStartTime,
-      endTime: otEndTime,
-      hours: previewOt.totalHours,
-      type: previewOt.type,
-      diurnasHours: previewOt.diurnasHours,
-      nocturnasHours: previewOt.nocturnasHours,
-      calculatedAmount: previewAmount
+      fecha: fechaHE,
+      horaInicio: horaInicioHE,
+      horaFin: horaFinHE,
+      horasTotales: vistaPreviaHE.horasTotales,
+      tipo: vistaPreviaHE.tipo,
+      horasDiurnas: vistaPreviaHE.horasDiurnas,
+      horasNocturnas: vistaPreviaHE.horasNocturnas,
+      montoCalculado: montoVistaPreviaHE
     };
 
-    onChange({
-      overtimeEntries: [...data.overtimeEntries, newEntry]
+    alCambiar({
+      registrosHorasExtras: [...datos.registrosHorasExtras, nuevoRegistro]
     });
-    setShowOvertimeModal(false);
+    setMostrarModalHorasExtras(false);
   };
 
-  const handleRemoveOvertime = (id: string) => {
-    onChange({
-      overtimeEntries: data.overtimeEntries.filter(e => e.id !== id)
+  const eliminarHoraExtra = (id: string) => {
+    alCambiar({
+      registrosHorasExtras: datos.registrosHorasExtras.filter(e => e.id !== id)
     });
   };
 
-  const toggleHoliday = (holidayId: string) => {
-    const isSelected = data.selectedHolidays.includes(holidayId);
-    let newSelected: string[];
-    if (isSelected) {
-      newSelected = data.selectedHolidays.filter(id => id !== holidayId);
+  const alternarDiaAsueto = (idAsueto: string) => {
+    const yaEstaSeleccionado = datos.asuetosSeleccionados.includes(idAsueto);
+    let nuevosSeleccionados: string[];
+    if (yaEstaSeleccionado) {
+      nuevosSeleccionados = datos.asuetosSeleccionados.filter(id => id !== idAsueto);
     } else {
-      newSelected = [...data.selectedHolidays, holidayId];
+      nuevosSeleccionados = [...datos.asuetosSeleccionados, idAsueto];
     }
-    onChange({ selectedHolidays: newSelected });
+    alCambiar({ asuetosSeleccionados: nuevosSeleccionados });
   };
 
   return (
@@ -102,8 +95,8 @@ export const LaborForm: React.FC<LaborFormProps> = ({
             <input
               type="text"
               placeholder="Ej. Juan Carlos Pérez López"
-              value={data.fullName}
-              onChange={(e) => onChange({ fullName: e.target.value })}
+              value={datos.nombreCompleto}
+              onChange={(e) => alCambiar({ nombreCompleto: e.target.value })}
               className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2e5c] focus:border-transparent transition-all"
             />
           </div>
@@ -115,8 +108,8 @@ export const LaborForm: React.FC<LaborFormProps> = ({
             <input
               type="text"
               placeholder="Ej. Comercial SV, S.A. de C.V."
-              value={data.companyName}
-              onChange={(e) => onChange({ companyName: e.target.value })}
+              value={datos.empresa}
+              onChange={(e) => alCambiar({ empresa: e.target.value })}
               className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2e5c] focus:border-transparent transition-all"
             />
           </div>
@@ -148,8 +141,8 @@ export const LaborForm: React.FC<LaborFormProps> = ({
               min="0"
               step="0.01"
               placeholder="0.00"
-              value={data.salary ? data.salary : ''}
-              onChange={(e) => onChange({ salary: e.target.value === '' ? 0 : parseFloat(e.target.value) || 0 })}
+              value={datos.salarioMensual ? datos.salarioMensual : ''}
+              onChange={(e) => alCambiar({ salarioMensual: e.target.value === '' ? 0 : parseFloat(e.target.value) || 0 })}
               className="w-full bg-slate-50 border border-slate-300 rounded-lg pl-8 pr-3.5 py-2.5 text-sm text-slate-900 font-bold focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2e5c] focus:border-transparent transition-all placeholder:text-slate-400 placeholder:font-normal"
               required
             />
@@ -166,8 +159,8 @@ export const LaborForm: React.FC<LaborFormProps> = ({
               type="number"
               min="0"
               placeholder="0"
-              value={data.yearsWorkedInput ? data.yearsWorkedInput : ''}
-              onChange={(e) => onChange({ yearsWorkedInput: e.target.value === '' ? 0 : parseInt(e.target.value) || 0 })}
+              value={datos.anosLaboradosInput ? datos.anosLaboradosInput : ''}
+              onChange={(e) => alCambiar({ anosLaboradosInput: e.target.value === '' ? 0 : parseInt(e.target.value) || 0 })}
               className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2e5c] transition-all placeholder:text-slate-400 placeholder:font-normal"
             />
           </div>
@@ -181,8 +174,8 @@ export const LaborForm: React.FC<LaborFormProps> = ({
               min="0"
               max="11"
               placeholder="0"
-              value={data.monthsWorkedInput ? data.monthsWorkedInput : ''}
-              onChange={(e) => onChange({ monthsWorkedInput: e.target.value === '' ? 0 : parseInt(e.target.value) || 0 })}
+              value={datos.mesesLaboradosInput ? datos.mesesLaboradosInput : ''}
+              onChange={(e) => alCambiar({ mesesLaboradosInput: e.target.value === '' ? 0 : parseInt(e.target.value) || 0 })}
               className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2e5c] transition-all placeholder:text-slate-400 placeholder:font-normal"
             />
             <span className="text-[11px] text-slate-400 mt-1 block">Entre 0 y 11</span>
@@ -198,8 +191,8 @@ export const LaborForm: React.FC<LaborFormProps> = ({
             </label>
             <input
               type="date"
-              value={data.startDate}
-              onChange={(e) => onChange({ startDate: e.target.value })}
+              value={datos.fechaInicio}
+              onChange={(e) => alCambiar({ fechaInicio: e.target.value })}
               className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2e5c]"
             />
           </div>
@@ -211,8 +204,8 @@ export const LaborForm: React.FC<LaborFormProps> = ({
             </label>
             <input
               type="date"
-              value={data.endDate}
-              onChange={(e) => onChange({ endDate: e.target.value })}
+              value={datos.fechaFin}
+              onChange={(e) => alCambiar({ fechaFin: e.target.value })}
               className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2e5c]"
             />
           </div>
@@ -229,8 +222,8 @@ export const LaborForm: React.FC<LaborFormProps> = ({
               <span className="text-[11px] text-slate-500 block mb-1">Inicio vacaciones</span>
               <input
                 type="date"
-                value={data.vacationStartDate}
-                onChange={(e) => onChange({ vacationStartDate: e.target.value })}
+                value={datos.fechaInicioVacaciones}
+                onChange={(e) => alCambiar({ fechaInicioVacaciones: e.target.value })}
                 className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#0a2e5c]"
               />
             </div>
@@ -238,8 +231,8 @@ export const LaborForm: React.FC<LaborFormProps> = ({
               <span className="text-[11px] text-slate-500 block mb-1">Fin vacaciones</span>
               <input
                 type="date"
-                value={data.vacationEndDate}
-                onChange={(e) => onChange({ vacationEndDate: e.target.value })}
+                value={datos.fechaFinVacaciones}
+                onChange={(e) => alCambiar({ fechaFinVacaciones: e.target.value })}
                 className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#0a2e5c]"
               />
             </div>
@@ -261,18 +254,18 @@ export const LaborForm: React.FC<LaborFormProps> = ({
         <div className="space-y-3">
           {/* Despido Injustificado */}
           <label
-            onClick={() => onChange({ terminationType: 'despido_injustificado' })}
+            onClick={() => alCambiar({ tipoTerminacion: 'despido_injustificado' })}
             className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all ${
-              data.terminationType === 'despido_injustificado'
+              datos.tipoTerminacion === 'despido_injustificado'
                 ? 'bg-blue-50/70 border-blue-600 ring-1 ring-blue-600'
                 : 'bg-slate-50 border-slate-200 hover:bg-slate-100/70'
             }`}
           >
             <input
               type="radio"
-              name="terminationType"
-              checked={data.terminationType === 'despido_injustificado'}
-              onChange={() => onChange({ terminationType: 'despido_injustificado' })}
+              name="tipoTerminacion"
+              checked={datos.tipoTerminacion === 'despido_injustificado'}
+              onChange={() => alCambiar({ tipoTerminacion: 'despido_injustificado' })}
               className="mt-1 text-[#0a2e5c] focus:ring-[#0a2e5c]"
             />
             <div>
@@ -285,18 +278,18 @@ export const LaborForm: React.FC<LaborFormProps> = ({
 
           {/* Renuncia Voluntaria */}
           <label
-            onClick={() => onChange({ terminationType: 'renuncia_voluntaria' })}
+            onClick={() => alCambiar({ tipoTerminacion: 'renuncia_voluntaria' })}
             className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all ${
-              data.terminationType === 'renuncia_voluntaria'
+              datos.tipoTerminacion === 'renuncia_voluntaria'
                 ? 'bg-blue-50/70 border-blue-600 ring-1 ring-blue-600'
                 : 'bg-slate-50 border-slate-200 hover:bg-slate-100/70'
             }`}
           >
             <input
               type="radio"
-              name="terminationType"
-              checked={data.terminationType === 'renuncia_voluntaria'}
-              onChange={() => onChange({ terminationType: 'renuncia_voluntaria' })}
+              name="tipoTerminacion"
+              checked={datos.tipoTerminacion === 'renuncia_voluntaria'}
+              onChange={() => alCambiar({ tipoTerminacion: 'renuncia_voluntaria' })}
               className="mt-1 text-[#0a2e5c] focus:ring-[#0a2e5c]"
             />
             <div>
@@ -309,7 +302,7 @@ export const LaborForm: React.FC<LaborFormProps> = ({
         </div>
 
         {/* Modal / Cuadro de Renuncia Voluntaria */}
-        {data.terminationType === 'renuncia_voluntaria' && (
+        {datos.tipoTerminacion === 'renuncia_voluntaria' && (
           <div className="mt-4 p-4 rounded-xl bg-amber-50/80 border border-amber-300">
             <span className="text-xs font-bold text-amber-900 uppercase tracking-wider block mb-2">
               Validación de Preaviso Legal al Patrono
@@ -321,9 +314,9 @@ export const LaborForm: React.FC<LaborFormProps> = ({
             <div className="flex gap-3">
               <button
                 type="button"
-                onClick={() => onChange({ informedEmployer: true })}
+                onClick={() => alCambiar({ informoAlPatrono: true })}
                 className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  data.informedEmployer === true
+                  datos.informoAlPatrono === true
                     ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-500'
                     : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-50'
                 }`}
@@ -333,9 +326,9 @@ export const LaborForm: React.FC<LaborFormProps> = ({
 
               <button
                 type="button"
-                onClick={() => onChange({ informedEmployer: false })}
+                onClick={() => alCambiar({ informoAlPatrono: false })}
                 className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  data.informedEmployer === false
+                  datos.informoAlPatrono === false
                     ? 'bg-red-600 text-white shadow-sm ring-2 ring-red-500'
                     : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-50'
                 }`}
@@ -344,7 +337,7 @@ export const LaborForm: React.FC<LaborFormProps> = ({
               </button>
             </div>
 
-            {data.informedEmployer === false && (
+            {datos.informoAlPatrono === false && (
               <div className="mt-3 p-3 bg-red-100 border border-red-300 rounded-lg text-red-900 text-xs flex items-start gap-2">
                 <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
                 <span>
@@ -372,9 +365,9 @@ export const LaborForm: React.FC<LaborFormProps> = ({
         </p>
 
         <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs text-slate-700 flex items-center justify-between">
-          <span>Régimen aplicable: <strong>{results.aguinaldoSeniorityBracket}</strong></span>
+          <span>Régimen aplicable: <strong>{resultados.tramoAntiguedadAguinaldo}</strong></span>
           <span className="text-blue-700 font-bold">
-            {results.aguinaldoIsProportional ? 'Proporcional' : 'Completo (100%)'}
+            {resultados.aguinaldoEsProporcional ? 'Proporcional' : 'Completo (100%)'}
           </span>
         </div>
       </div>
@@ -398,9 +391,9 @@ export const LaborForm: React.FC<LaborFormProps> = ({
           <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-800">
             <input
               type="radio"
-              name="workedHolidays"
-              checked={data.workedHolidays}
-              onChange={() => onChange({ workedHolidays: true })}
+              name="laboroAsuetos"
+              checked={datos.laboroAsuetos}
+              onChange={() => alCambiar({ laboroAsuetos: true })}
               className="text-[#0a2e5c] focus:ring-[#0a2e5c]"
             />
             <span>Sí, laboró</span>
@@ -409,16 +402,16 @@ export const LaborForm: React.FC<LaborFormProps> = ({
           <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-800">
             <input
               type="radio"
-              name="workedHolidays"
-              checked={!data.workedHolidays}
-              onChange={() => onChange({ workedHolidays: false, selectedHolidays: [] })}
+              name="laboroAsuetos"
+              checked={!datos.laboroAsuetos}
+              onChange={() => alCambiar({ laboroAsuetos: false, asuetosSeleccionados: [] })}
               className="text-[#0a2e5c] focus:ring-[#0a2e5c]"
             />
             <span>No laboró</span>
           </label>
         </div>
 
-        {!data.workedHolidays ? (
+        {!datos.laboroAsuetos ? (
           <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-center text-xs text-slate-400">
             Sin días de asueto laborados — monto: $0.00
           </div>
@@ -428,24 +421,24 @@ export const LaborForm: React.FC<LaborFormProps> = ({
               Marque los días festivos laborados:
             </span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {OFFICIAL_HOLIDAYS.map(holiday => (
+              {DIAS_ASUETO_OFICIALES.map(asueto => (
                 <label
-                  key={holiday.id}
+                  key={asueto.id}
                   className={`flex items-center gap-2 p-2 rounded-lg border text-xs cursor-pointer select-none transition-all ${
-                    data.selectedHolidays.includes(holiday.id)
+                    datos.asuetosSeleccionados.includes(asueto.id)
                       ? 'bg-blue-50 border-blue-400 text-blue-950 font-bold'
                       : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
                   }`}
                 >
                   <input
                     type="checkbox"
-                    checked={data.selectedHolidays.includes(holiday.id)}
-                    onChange={() => toggleHoliday(holiday.id)}
+                    checked={datos.asuetosSeleccionados.includes(asueto.id)}
+                    onChange={() => alternarDiaAsueto(asueto.id)}
                     className="rounded text-[#0a2e5c]"
                   />
                   <div className="truncate">
-                    <span>{holiday.name}</span>
-                    <span className="text-[10px] text-slate-400 block">{holiday.dateStr}</span>
+                    <span>{asueto.nombre}</span>
+                    <span className="text-[10px] text-slate-400 block">{asueto.fechaTexto}</span>
                   </div>
                 </label>
               ))}
@@ -469,14 +462,14 @@ export const LaborForm: React.FC<LaborFormProps> = ({
         <label className="flex items-center gap-2 mb-4 cursor-pointer text-xs font-semibold text-slate-700">
           <input
             type="checkbox"
-            checked={data.noOvertimeApply}
-            onChange={(e) => onChange({ noOvertimeApply: e.target.checked, overtimeEntries: [], workedWeeklyRestDays: 0 })}
+            checked={datos.noAplicaHorasExtras}
+            onChange={(e) => alCambiar({ noAplicaHorasExtras: e.target.checked, registrosHorasExtras: [], diasDescansoLaborados: 0 })}
             className="rounded text-[#0a2e5c] focus:ring-[#0a2e5c]"
           />
           <span>No aplica — Sin horas extras ni descanso semanal laborado</span>
         </label>
 
-        {!data.noOvertimeApply && (
+        {!datos.noAplicaHorasExtras && (
           <div className="space-y-4 pt-2 border-t border-slate-100">
             <div>
               <span className="text-xs font-bold text-slate-800 uppercase tracking-wide block mb-1">
@@ -497,28 +490,28 @@ export const LaborForm: React.FC<LaborFormProps> = ({
               </div>
 
               {/* Empty state or list */}
-              {data.overtimeEntries.length === 0 ? (
+              {datos.registrosHorasExtras.length === 0 ? (
                 <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-200 text-center text-xs text-slate-400 mb-3">
                   Sin registros. Presiona "+ Agregar jornada" para registrar horas no pagadas.
                 </div>
               ) : (
                 <div className="space-y-2 mb-3">
-                  {data.overtimeEntries.map(entry => (
-                    <div key={entry.id} className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                  {datos.registrosHorasExtras.map(registro => (
+                    <div key={registro.id} className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
                       <div className="flex items-center gap-2.5">
-                        <span className="font-mono font-bold text-slate-800">{entry.date}</span>
-                        <span className="text-slate-500">({entry.startTime} a {entry.endTime})</span>
+                        <span className="font-mono font-bold text-slate-800">{registro.fecha}</span>
+                        <span className="text-slate-500">({registro.horaInicio} a {registro.horaFin})</span>
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          entry.type === 'nocturna' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                          registro.tipo === 'nocturna' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
                         }`}>
-                          {entry.hours}h ({entry.type})
+                          {registro.horasTotales}h ({registro.tipo})
                         </span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="font-bold text-slate-900 font-mono">{formatCurrency(entry.calculatedAmount)}</span>
+                        <span className="font-bold text-slate-900 font-mono">{formatearMoneda(registro.montoCalculado)}</span>
                         <button
                           type="button"
-                          onClick={() => handleRemoveOvertime(entry.id)}
+                          onClick={() => eliminarHoraExtra(registro.id)}
                           className="text-slate-400 hover:text-red-500"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -531,7 +524,7 @@ export const LaborForm: React.FC<LaborFormProps> = ({
 
               <button
                 type="button"
-                onClick={() => setShowOvertimeModal(true)}
+                onClick={() => setMostrarModalHorasExtras(true)}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-[#0a2e5c] bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-all"
               >
                 <Plus className="w-3.5 h-3.5" />
@@ -547,8 +540,8 @@ export const LaborForm: React.FC<LaborFormProps> = ({
               <input
                 type="number"
                 min="0"
-                value={data.workedWeeklyRestDays ? data.workedWeeklyRestDays : ''}
-                onChange={(e) => onChange({ workedWeeklyRestDays: e.target.value === '' ? 0 : parseInt(e.target.value) || 0 })}
+                value={datos.diasDescansoLaborados ? datos.diasDescansoLaborados : ''}
+                onChange={(e) => alCambiar({ diasDescansoLaborados: e.target.value === '' ? 0 : parseInt(e.target.value) || 0 })}
                 placeholder="0"
                 className="w-full sm:w-48 bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-900 font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2e5c] placeholder:text-slate-400 placeholder:font-normal"
               />
@@ -560,11 +553,11 @@ export const LaborForm: React.FC<LaborFormProps> = ({
         )}
       </div>
 
-      {/* ACTION BUTTONS: CALCULAR & LIMPIAR */}
+      {/* BOTONES DE ACCIÓN: CALCULAR & LIMPIAR */}
       <div className="flex flex-col sm:flex-row gap-3 pt-2">
         <button
           type="button"
-          onClick={onCalculate}
+          onClick={alCalcular}
           className="flex-1 bg-[#0a2e5c] hover:bg-[#082447] active:scale-[0.99] text-white font-extrabold text-sm py-3.5 px-6 rounded-xl shadow-md transition-all tracking-wider uppercase text-center"
         >
           CALCULAR LIQUIDACIÓN
@@ -572,7 +565,7 @@ export const LaborForm: React.FC<LaborFormProps> = ({
 
         <button
           type="button"
-          onClick={onReset}
+          onClick={alLimpiar}
           className="sm:w-36 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 font-bold text-sm py-3.5 px-6 rounded-xl transition-all uppercase text-center"
         >
           LIMPIAR
@@ -580,7 +573,7 @@ export const LaborForm: React.FC<LaborFormProps> = ({
       </div>
 
       {/* MODAL / FORMULARIO OVERTIME POPUP */}
-      {showOvertimeModal && (
+      {mostrarModalHorasExtras && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
             <h3 className="text-base font-extrabold text-[#0a2e5c] mb-1">
@@ -595,8 +588,8 @@ export const LaborForm: React.FC<LaborFormProps> = ({
                 <label className="block text-xs font-bold text-slate-700 mb-1">Fecha de la Jornada</label>
                 <input
                   type="date"
-                  value={otDate}
-                  onChange={(e) => setOtDate(e.target.value)}
+                  value={fechaHE}
+                  onChange={(e) => setFechaHE(e.target.value)}
                   className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-800"
                 />
               </div>
@@ -606,8 +599,8 @@ export const LaborForm: React.FC<LaborFormProps> = ({
                   <label className="block text-xs font-bold text-slate-700 mb-1">Hora Inicio</label>
                   <input
                     type="time"
-                    value={otStartTime}
-                    onChange={(e) => setOtStartTime(e.target.value)}
+                    value={horaInicioHE}
+                    onChange={(e) => setHoraInicioHE(e.target.value)}
                     className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-800"
                   />
                 </div>
@@ -615,30 +608,30 @@ export const LaborForm: React.FC<LaborFormProps> = ({
                   <label className="block text-xs font-bold text-slate-700 mb-1">Hora Fin</label>
                   <input
                     type="time"
-                    value={otEndTime}
-                    onChange={(e) => setOtEndTime(e.target.value)}
+                    value={horaFinHE}
+                    onChange={(e) => setHoraFinHE(e.target.value)}
                     className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-800"
                   />
                 </div>
               </div>
 
               <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs flex justify-between items-center">
-                <span>Detección: <strong>{previewOt.type} ({previewOt.totalHours} hrs)</strong></span>
-                <span className="font-bold text-[#0a2e5c]">{formatCurrency(previewAmount)}</span>
+                <span>Detección: <strong>{vistaPreviaHE.tipo} ({vistaPreviaHE.horasTotales} hrs)</strong></span>
+                <span className="font-bold text-[#0a2e5c]">{formatearMoneda(montoVistaPreviaHE)}</span>
               </div>
             </div>
 
             <div className="flex gap-2 mt-5">
               <button
                 type="button"
-                onClick={handleAddOvertime}
+                onClick={agregarHoraExtra}
                 className="flex-1 bg-[#0a2e5c] text-white text-xs font-bold py-2.5 rounded-lg"
               >
                 Añadir Turno
               </button>
               <button
                 type="button"
-                onClick={() => setShowOvertimeModal(false)}
+                onClick={() => setMostrarModalHorasExtras(false)}
                 className="px-4 border border-slate-300 text-slate-700 text-xs font-bold py-2.5 rounded-lg"
               >
                 Cancelar

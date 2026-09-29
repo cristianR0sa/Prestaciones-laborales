@@ -1,330 +1,343 @@
 import { 
-  EmployeeData, 
-  CalculationResult, 
-  OvertimeEntry 
+  DatosEmpleado, 
+  ResultadoLiquidacion, 
+  RegistroHoraExtra 
 } from '../types';
 import { 
-  MAX_MONTHLY_INDEMNITY_BASE, 
-  MAX_DAILY_INDEMNITY_BASE, 
-  ISSS_RATE, 
-  ISSS_MAX_CAP, 
-  AFP_RATE,
-  OFFICIAL_HOLIDAYS 
+  TOPE_MENSUAL_INDEMNIZACION, 
+  TOPE_DIARIO_INDEMNIZACION, 
+  TASA_ISSS, 
+  TOPE_MAXIMO_ISSS, 
+  TASA_AFP,
+  DIAS_ASUETO_OFICIALES 
 } from '../constants/holidays';
 
-export function calculateDateDifference(startDateStr: string, endDateStr: string) {
-  if (!startDateStr || !endDateStr) {
-    return { years: 0, months: 0, days: 0, totalDays: 0 };
+/**
+ * Calcula la diferencia exacta entre dos fechas en años, meses y días.
+ */
+export function calcularDiferenciaFechas(fechaInicioTexto: string, fechaFinTexto: string) {
+  if (!fechaInicioTexto || !fechaFinTexto) {
+    return { anos: 0, meses: 0, dias: 0, totalDias: 0 };
   }
 
-  const start = new Date(startDateStr);
-  const end = new Date(endDateStr);
+  const inicio = new Date(fechaInicioTexto);
+  const fin = new Date(fechaFinTexto);
 
-  if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) {
-    return { years: 0, months: 0, days: 0, totalDays: 0 };
+  if (isNaN(inicio.getTime()) || isNaN(fin.getTime()) || fin < inicio) {
+    return { anos: 0, meses: 0, dias: 0, totalDias: 0 };
   }
 
-  const diffTime = Math.abs(end.getTime() - start.getTime());
-  const totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+  const diferenciaTiempo = Math.abs(fin.getTime() - inicio.getTime());
+  const totalDias = Math.ceil(diferenciaTiempo / (1000 * 60 * 60 * 24)) + 1;
 
-  let years = end.getFullYear() - start.getFullYear();
-  let months = end.getMonth() - start.getMonth();
-  let days = end.getDate() - start.getDate() + 1;
+  let anos = fin.getFullYear() - inicio.getFullYear();
+  let meses = fin.getMonth() - inicio.getMonth();
+  let dias = fin.getDate() - inicio.getDate() + 1;
 
-  if (days < 0) {
-    months -= 1;
-    const prevMonth = new Date(end.getFullYear(), end.getMonth(), 0);
-    days += prevMonth.getDate();
+  if (dias < 0) {
+    meses -= 1;
+    const mesAnterior = new Date(fin.getFullYear(), fin.getMonth(), 0);
+    dias += mesAnterior.getDate();
   }
 
-  if (months < 0) {
-    years -= 1;
-    months += 12;
+  if (meses < 0) {
+    anos -= 1;
+    meses += 12;
   }
 
-  return { years: Math.max(0, years), months: Math.max(0, months), days: Math.max(0, days), totalDays };
+  return { anos: Math.max(0, anos), meses: Math.max(0, meses), dias: Math.max(0, dias), totalDias };
 }
 
-export function calculateOvertimeType(startTime: string, endTime: string): { 
-  totalHours: number; 
-  diurnasHours: number; 
-  nocturnasHours: number; 
-  type: 'diurna' | 'nocturna' | 'mixta' 
+/**
+ * Deduce automáticamente el tipo de hora extra (diurna, nocturna o mixta) según las horas ingresadas.
+ */
+export function deducirTipoHoraExtra(horaInicioTexto: string, horaFinTexto: string): { 
+  horasTotales: number; 
+  horasDiurnas: number; 
+  horasNocturnas: number; 
+  tipo: 'diurna' | 'nocturna' | 'mixta' 
 } {
-  if (!startTime || !endTime) {
-    return { totalHours: 0, diurnasHours: 0, nocturnasHours: 0, type: 'diurna' };
+  if (!horaInicioTexto || !horaFinTexto) {
+    return { horasTotales: 0, horasDiurnas: 0, horasNocturnas: 0, tipo: 'diurna' };
   }
 
-  const [startH, startM] = startTime.split(':').map(Number);
-  const [endH, endM] = endTime.split(':').map(Number);
+  const [inicioHora, inicioMinutos] = horaInicioTexto.split(':').map(Number);
+  const [finHora, finMinutos] = horaFinTexto.split(':').map(Number);
 
-  let startMinutes = startH * 60 + startM;
-  let endMinutes = endH * 60 + endM;
+  let minutosInicio = inicioHora * 60 + inicioMinutos;
+  let minutosFin = finHora * 60 + finMinutos;
 
-  if (endMinutes < startMinutes) {
-    endMinutes += 24 * 60;
+  if (minutosFin < minutosInicio) {
+    minutosFin += 24 * 60; // Cruza medianoche
   }
 
-  const totalMinutes = endMinutes - startMinutes;
-  const totalHours = Number((totalMinutes / 60).toFixed(2));
+  const totalMinutos = minutosFin - minutosInicio;
+  const horasTotales = Number((totalMinutos / 60).toFixed(2));
 
-  let diurnasMinutes = 0;
-  let nocturnasMinutes = 0;
+  let minutosDiurnos = 0;
+  let minutosNocturnos = 0;
 
-  for (let m = startMinutes; m < endMinutes; m++) {
-    const currentMinInDay = m % (24 * 60);
-    if (currentMinInDay >= 360 && currentMinInDay < 1140) { // 06:00 a 19:00
-      diurnasMinutes++;
+  // Horario diurno: 06:00 a 19:00 (minuto 360 al 1140)
+  for (let m = minutosInicio; m < minutosFin; m++) {
+    const minutoEnElDia = m % (24 * 60);
+    if (minutoEnElDia >= 360 && minutoEnElDia < 1140) {
+      minutosDiurnos++;
     } else {
-      nocturnasMinutes++;
+      minutosNocturnos++;
     }
   }
 
-  const diurnasHours = Number((diurnasMinutes / 60).toFixed(2));
-  const nocturnasHours = Number((nocturnasMinutes / 60).toFixed(2));
+  const horasDiurnas = Number((minutosDiurnos / 60).toFixed(2));
+  const horasNocturnas = Number((minutosNocturnos / 60).toFixed(2));
 
-  let type: 'diurna' | 'nocturna' | 'mixta' = 'diurna';
-  if (diurnasHours > 0 && nocturnasHours > 0) {
-    type = 'mixta';
-  } else if (nocturnasHours > 0) {
-    type = 'nocturna';
+  let tipo: 'diurna' | 'nocturna' | 'mixta' = 'diurna';
+  if (horasDiurnas > 0 && horasNocturnas > 0) {
+    tipo = 'mixta';
+  } else if (horasNocturnas > 0) {
+    tipo = 'nocturna';
   }
 
-  return { totalHours, diurnasHours, nocturnasHours, type };
+  return { horasTotales, horasDiurnas, horasNocturnas, tipo };
 }
 
-export function calculateLaborBenefits(data: EmployeeData, hasCalculated = true): CalculationResult {
-  const salary = Number(data.salary) || 0;
-  const dailySalary = salary > 0 ? salary / 30 : 0;
-  const hourlySalary = dailySalary > 0 ? dailySalary / 8 : 0;
+/**
+ * Función principal que calcula todas las prestaciones laborales de El Salvador.
+ */
+export function calcularPrestacionesLaborales(datos: DatosEmpleado, haCalculado = true): ResultadoLiquidacion {
+  const salarioMensual = Number(datos.salarioMensual) || 0;
+  const salarioDiario = salarioMensual > 0 ? salarioMensual / 30 : 0;
+  const salarioPorHora = salarioDiario > 0 ? salarioDiario / 8 : 0;
 
-  // Antigüedad (prioriza cálculo por fechas si existen o inputs de años/meses)
-  let yearsWorked = Number(data.yearsWorkedInput) || 0;
-  let monthsWorked = Number(data.monthsWorkedInput) || 0;
-  let daysWorked = 0;
-  let totalDaysWorked = (yearsWorked * 365) + (monthsWorked * 30);
+  // 1. Antigüedad
+  let anosTrabajados = Number(datos.anosLaboradosInput) || 0;
+  let mesesTrabajados = Number(datos.mesesLaboradosInput) || 0;
+  let diasTrabajados = 0;
+  let totalDiasTrabajados = (anosTrabajados * 365) + (mesesTrabajados * 30);
 
-  if (data.startDate && data.endDate) {
-    const diff = calculateDateDifference(data.startDate, data.endDate);
-    yearsWorked = diff.years;
-    monthsWorked = diff.months;
-    daysWorked = diff.days;
-    totalDaysWorked = diff.totalDays;
+  if (datos.fechaInicio && datos.fechaFin) {
+    const antiguedad = calcularDiferenciaFechas(datos.fechaInicio, datos.fechaFin);
+    anosTrabajados = antiguedad.anos;
+    mesesTrabajados = antiguedad.meses;
+    diasTrabajados = antiguedad.dias;
+    totalDiasTrabajados = antiguedad.totalDias;
   }
 
-  // 1. Indemnización
-  let indemnityBase = salary;
-  let isCapped = false;
-  let indemnityCappedDaily = dailySalary;
-  let indemnityAmount = 0;
-  let indemnityBlocked = false;
-  let indemnityBlockReason = '';
+  // 2. Indemnización por Despido Injustificado / Compensación por Renuncia
+  let baseIndemnizacion = salarioMensual;
+  let aplicaTopeLegal = false;
+  let salarioDiarioTopado = salarioDiario;
+  let montoIndemnizacion = 0;
+  let indemnizacionBloqueada = false;
+  let motivoBloqueoIndemnizacion = '';
 
-  if (data.terminationType === 'renuncia_voluntaria') {
-    if (data.informedEmployer === false) {
-      indemnityBlocked = true;
-      indemnityBlockReason = 'Por ley, al NO informar con preaviso al patrono, no aplica compensación económica por renuncia.';
-      indemnityAmount = 0;
-    } else if (data.informedEmployer === true) {
-      if (yearsWorked < 2) {
-        indemnityBlocked = true;
-        indemnityBlockReason = 'La ley exige al menos 2 años continuos para compensación por renuncia voluntaria.';
-        indemnityAmount = 0;
+  if (datos.tipoTerminacion === 'renuncia_voluntaria') {
+    if (datos.informoAlPatrono === false) {
+      indemnizacionBloqueada = true;
+      motivoBloqueoIndemnizacion = 'Por ley, al NO informar con preaviso al patrono, no aplica compensación económica por renuncia.';
+      montoIndemnizacion = 0;
+    } else if (datos.informoAlPatrono === true) {
+      if (anosTrabajados < 2) {
+        indemnizacionBloqueada = true;
+        motivoBloqueoIndemnizacion = 'La ley exige al menos 2 años continuos para compensación por renuncia voluntaria.';
+        montoIndemnizacion = 0;
       } else {
-        const maxRenunciaMensual = 365.00 * 2;
-        const renunciaBaseDiaria = Math.min(dailySalary, maxRenunciaMensual / 30);
-        const fractionDays = (monthsWorked * 30) + daysWorked;
-        const totalEquivYears = yearsWorked + (fractionDays / 365);
-        indemnityAmount = totalEquivYears * 15 * renunciaBaseDiaria;
+        const maximoRenunciaMensual = 365.00 * 2;
+        const renunciaBaseDiaria = Math.min(salarioDiario, maximoRenunciaMensual / 30);
+        const diasFraccion = (mesesTrabajados * 30) + diasTrabajados;
+        const totalAnosEquivalentes = anosTrabajados + (diasFraccion / 365);
+        montoIndemnizacion = totalAnosEquivalentes * 15 * renunciaBaseDiaria;
       }
     } else {
-      indemnityBlocked = true;
-      indemnityBlockReason = 'Debe indicar si informó con preaviso al patrono.';
-      indemnityAmount = 0;
+      indemnizacionBloqueada = true;
+      motivoBloqueoIndemnizacion = 'Debe indicar si informó con preaviso al patrono.';
+      montoIndemnizacion = 0;
     }
   } else {
-    // Despido Injustificado
-    if (dailySalary > MAX_DAILY_INDEMNITY_BASE) {
-      isCapped = true;
-      indemnityCappedDaily = MAX_DAILY_INDEMNITY_BASE;
-      indemnityBase = MAX_MONTHLY_INDEMNITY_BASE;
+    // Despido Injustificado (Art. 58 Código de Trabajo)
+    if (salarioDiario > TOPE_DIARIO_INDEMNIZACION) {
+      aplicaTopeLegal = true;
+      salarioDiarioTopado = TOPE_DIARIO_INDEMNIZACION;
+      baseIndemnizacion = TOPE_MENSUAL_INDEMNIZACION;
     } else {
-      indemnityCappedDaily = dailySalary;
-      indemnityBase = salary;
+      salarioDiarioTopado = salarioDiario;
+      baseIndemnizacion = salarioMensual;
     }
 
-    const fractionDays = (monthsWorked * 30) + daysWorked;
-    const totalEquivalentYears = yearsWorked + (fractionDays / 365);
-    indemnityAmount = totalEquivalentYears * 30 * indemnityCappedDaily;
+    const diasFraccion = (mesesTrabajados * 30) + diasTrabajados;
+    const totalAnosEquivalentes = anosTrabajados + (diasFraccion / 365);
+    montoIndemnizacion = totalAnosEquivalentes * 30 * salarioDiarioTopado;
   }
 
-  // 2. Aguinaldo
-  let aguinaldoDaysEntitled = 15;
-  let aguinaldoSeniorityBracket = 'Menor a 3 años: 15 días';
+  // 3. Aguinaldo (Art. 196-198 Código de Trabajo)
+  let diasAguinaldoDerecho = 15;
+  let tramoAntiguedadAguinaldo = 'Menor a 3 años: 15 días';
 
-  if (yearsWorked >= 5) {
-    aguinaldoDaysEntitled = 21;
-    aguinaldoSeniorityBracket = 'Mayor o igual a 5 años: 21 días';
-  } else if (yearsWorked >= 3) {
-    aguinaldoDaysEntitled = 19;
-    aguinaldoSeniorityBracket = 'De 3 a menos de 5 años: 19 días';
+  if (anosTrabajados >= 5) {
+    diasAguinaldoDerecho = 21;
+    tramoAntiguedadAguinaldo = 'Mayor o igual a 5 años: 21 días';
+  } else if (anosTrabajados >= 3) {
+    diasAguinaldoDerecho = 19;
+    tramoAntiguedadAguinaldo = 'De 3 a menos de 5 años: 19 días';
   }
 
-  let aguinaldoIsProportional = false;
-  let aguinaldoDaysWorkedInPeriod = 365;
+  let aguinaldoEsProporcional = false;
+  let diasTrabajadosPeriodoAguinaldo = 365;
 
-  if (data.endDate) {
-    const end = new Date(data.endDate);
-    const endYear = end.getFullYear();
-    const currentPeriodStart = new Date(endYear - 1, 11, 12);
-    const currentPeriodEnd = new Date(endYear, 11, 11);
-    const actualStart = new Date(data.startDate || `${endYear}-01-01`);
-    const effectiveStart = actualStart > currentPeriodStart ? actualStart : currentPeriodStart;
+  if (datos.fechaFin) {
+    const fin = new Date(datos.fechaFin);
+    const anoFin = fin.getFullYear();
+    const inicioPeriodoActual = new Date(anoFin - 1, 11, 12);
+    const finPeriodoActual = new Date(anoFin, 11, 11);
+    const inicioEfectivo = new Date(datos.fechaInicio || `${anoFin}-01-01`);
+    const inicioReal = inicioEfectivo > inicioPeriodoActual ? inicioEfectivo : inicioPeriodoActual;
 
-    if (end < currentPeriodEnd || data.aguinaldoType === 'proporcional') {
-      aguinaldoIsProportional = true;
-      const diffTime = Math.abs(end.getTime() - effectiveStart.getTime());
-      aguinaldoDaysWorkedInPeriod = Math.min(365, Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1);
+    if (fin < finPeriodoActual || datos.tipoAguinaldo === 'proporcional') {
+      aguinaldoEsProporcional = true;
+      const diferenciaTiempo = Math.abs(fin.getTime() - inicioReal.getTime());
+      diasTrabajadosPeriodoAguinaldo = Math.min(365, Math.ceil(diferenciaTiempo / (1000 * 60 * 60 * 24)) + 1);
     }
   }
 
-  if (data.aguinaldoType === 'completo') {
-    aguinaldoIsProportional = false;
-    aguinaldoDaysWorkedInPeriod = 365;
+  if (datos.tipoAguinaldo === 'completo') {
+    aguinaldoEsProporcional = false;
+    diasTrabajadosPeriodoAguinaldo = 365;
   }
 
-  let aguinaldoAmount = 0;
-  if (aguinaldoIsProportional) {
-    aguinaldoAmount = (aguinaldoDaysWorkedInPeriod / 365) * aguinaldoDaysEntitled * dailySalary;
+  let montoAguinaldo = 0;
+  if (aguinaldoEsProporcional) {
+    montoAguinaldo = (diasTrabajadosPeriodoAguinaldo / 365) * diasAguinaldoDerecho * salarioDiario;
   } else {
-    aguinaldoAmount = aguinaldoDaysEntitled * dailySalary;
+    montoAguinaldo = diasAguinaldoDerecho * salarioDiario;
   }
 
-  // 3. Vacaciones
-  let vacationFractionDays = 365;
-  let vacationIsProportional = true;
+  // 4. Vacaciones y Prima Vacacional (+30%) (Art. 177 y 182 Código de Trabajo)
+  let diasFraccionVacacion = 365;
+  let vacacionEsProporcional = true;
 
-  if (data.vacationEndDate && data.endDate) {
-    const vacLastEnd = new Date(data.vacationEndDate);
-    const end = new Date(data.endDate);
-    if (!isNaN(vacLastEnd.getTime()) && !isNaN(end.getTime()) && end >= vacLastEnd) {
-      const diffTime = Math.abs(end.getTime() - vacLastEnd.getTime());
-      vacationFractionDays = Math.min(365, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+  if (datos.fechaFinVacaciones && datos.fechaFin) {
+    const finUltimaVacacion = new Date(datos.fechaFinVacaciones);
+    const fin = new Date(datos.fechaFin);
+    if (!isNaN(finUltimaVacacion.getTime()) && !isNaN(fin.getTime()) && fin >= finUltimaVacacion) {
+      const diferenciaTiempo = Math.abs(fin.getTime() - finUltimaVacacion.getTime());
+      diasFraccionVacacion = Math.min(365, Math.ceil(diferenciaTiempo / (1000 * 60 * 60 * 24)));
     }
   } else {
-    const daysInYear = (monthsWorked * 30) + daysWorked;
-    vacationFractionDays = Math.min(365, Math.max(1, daysInYear || 365));
+    const diasEnElAno = (mesesTrabajados * 30) + diasTrabajados;
+    diasFraccionVacacion = Math.min(365, Math.max(1, diasEnElAno || 365));
   }
 
-  const vacationDaysToPay = (vacationFractionDays / 365) * 15;
-  const vacationBaseAmount = vacationDaysToPay * dailySalary;
-  const vacationPremiumAmount = vacationBaseAmount * 0.30;
-  const vacationTotalAmount = vacationBaseAmount + vacationPremiumAmount;
+  const diasVacacionesPagar = (diasFraccionVacacion / 365) * 15;
+  const montoBaseVacacion = diasVacacionesPagar * salarioDiario;
+  const montoPrimaVacacional = montoBaseVacacion * 0.30;
+  const totalVacaciones = montoBaseVacacion + montoPrimaVacacional;
 
-  // 4. Asuetos
-  let holidaysWorkedCount = 0;
-  let holidaysWorkedAmount = 0;
-  const holidaysDetails: { name: string; date: string; amount: number }[] = [];
+  // 5. Días de Asueto Laborados (Art. 192 Código de Trabajo - Doble Salario)
+  let cantidadAsuetosLaborados = 0;
+  let montoAsuetosLaborados = 0;
+  const detalleAsuetos: { nombre: string; fecha: string; monto: number }[] = [];
 
-  if (data.workedHolidays && data.selectedHolidays.length > 0) {
-    data.selectedHolidays.forEach((holidayId) => {
-      const item = OFFICIAL_HOLIDAYS.find(h => h.id === holidayId);
+  if (datos.laboroAsuetos && datos.asuetosSeleccionados.length > 0) {
+    datos.asuetosSeleccionados.forEach((idAsueto) => {
+      const item = DIAS_ASUETO_OFICIALES.find(h => h.id === idAsueto);
       if (item) {
-        const dayPay = dailySalary * 2;
-        holidaysWorkedCount++;
-        holidaysWorkedAmount += dayPay;
-        holidaysDetails.push({ name: item.name, date: item.dateStr, amount: dayPay });
+        const pagoDia = salarioDiario * 2;
+        cantidadAsuetosLaborados++;
+        montoAsuetosLaborados += pagoDia;
+        detalleAsuetos.push({ nombre: item.nombre, fecha: item.fechaTexto, monto: pagoDia });
       }
     });
   }
 
-  // 5. Horas Extras & Descanso Semanal
-  let overtimeTotalHours = 0;
-  let overtimeDiurnasHours = 0;
-  let overtimeNocturnasHours = 0;
-  let overtimeTotalAmount = 0;
+  // 6. Horas Extras y Descanso Semanal (Art. 168-173 Código de Trabajo)
+  let totalHorasExtras = 0;
+  let horasExtrasDiurnas = 0;
+  let horasExtrasNocturnas = 0;
+  let montoHorasExtras = 0;
 
-  if (!data.noOvertimeApply && data.overtimeEntries.length > 0) {
-    data.overtimeEntries.forEach(entry => {
-      const diurnaPay = entry.diurnasHours * (hourlySalary * 2.00);
-      const nocturnaPay = entry.nocturnasHours * (hourlySalary * 2.50); // Recargo 150% = 2.5x según Figma
-      const entryTotal = diurnaPay + nocturnaPay;
+  if (!datos.noAplicaHorasExtras && datos.registrosHorasExtras.length > 0) {
+    datos.registrosHorasExtras.forEach(registro => {
+      const pagoDiurna = registro.horasDiurnas * (salarioPorHora * 2.00);
+      const pagoNocturna = registro.horasNocturnas * (salarioPorHora * 2.50); // Recargo 150% = 2.5x
+      const totalRegistro = pagoDiurna + pagoNocturna;
 
-      overtimeTotalHours += entry.hours;
-      overtimeDiurnasHours += entry.diurnasHours;
-      overtimeNocturnasHours += entry.nocturnasHours;
-      overtimeTotalAmount += entryTotal;
+      totalHorasExtras += registro.horasTotales;
+      horasExtrasDiurnas += registro.horasDiurnas;
+      horasExtrasNocturnas += registro.horasNocturnas;
+      montoHorasExtras += totalRegistro;
     });
   }
 
-  const weeklyRestWorkedDays = Number(data.workedWeeklyRestDays) || 0;
-  const weeklyRestWorkedAmount = weeklyRestWorkedDays * (dailySalary * 2.00);
+  const diasDescansoTrabajados = Number(datos.diasDescansoLaborados) || 0;
+  const montoDescansoTrabajado = diasDescansoTrabajados * (salarioDiario * 2.00);
 
-  // Totales
-  const grossTotal = (indemnityBlocked ? 0 : indemnityAmount) +
-                     aguinaldoAmount +
-                     vacationTotalAmount +
-                     holidaysWorkedAmount +
-                     overtimeTotalAmount +
-                     weeklyRestWorkedAmount;
+  // 7. Totales y Deducciones de Ley
+  const totalBruto = (indemnizacionBloqueada ? 0 : montoIndemnizacion) +
+                     montoAguinaldo +
+                     totalVacaciones +
+                     montoAsuetosLaborados +
+                     montoHorasExtras +
+                     montoDescansoTrabajado;
 
-  const isssDeduction = Math.min(grossTotal * ISSS_RATE, ISSS_MAX_CAP);
-  const afpDeduction = grossTotal * AFP_RATE;
-  const totalDeductions = isssDeduction + afpDeduction;
-  const netTotal = Math.max(0, grossTotal - totalDeductions);
+  const descuentoISSS = Math.min(totalBruto * TASA_ISSS, TOPE_MAXIMO_ISSS);
+  const descuentoAFP = totalBruto * TASA_AFP;
+  const totalDeducciones = descuentoISSS + descuentoAFP;
+  const totalNeto = Math.max(0, totalBruto - totalDeducciones);
 
   return {
-    hasCalculated,
-    yearsWorked,
-    monthsWorked,
-    daysWorked,
-    totalDaysWorked,
-    dailySalary,
-    hourlySalary,
+    haCalculado,
+    anosTrabajados,
+    mesesTrabajados,
+    diasTrabajados,
+    totalDiasTrabajados,
+    salarioDiario,
+    salarioPorHora,
     
-    indemnityBase,
-    indemnityCappedDaily,
-    isCapped,
-    indemnityAmount,
-    indemnityBlocked,
-    indemnityBlockReason,
+    baseIndemnizacion,
+    salarioDiarioTopado,
+    aplicaTopeLegal,
+    montoIndemnizacion,
+    indemnizacionBloqueada,
+    motivoBloqueoIndemnizacion,
     
-    aguinaldoDaysEntitled,
-    aguinaldoSeniorityBracket,
-    aguinaldoDaysWorkedInPeriod,
-    aguinaldoIsProportional,
-    aguinaldoAmount,
+    diasAguinaldoDerecho,
+    tramoAntiguedadAguinaldo,
+    diasTrabajadosPeriodoAguinaldo,
+    aguinaldoEsProporcional,
+    montoAguinaldo,
     
-    vacationDaysToPay,
-    vacationBaseAmount,
-    vacationPremiumAmount,
-    vacationTotalAmount,
-    vacationIsProportional,
+    diasVacacionesPagar,
+    montoBaseVacacion,
+    montoPrimaVacacional,
+    totalVacaciones,
+    vacacionEsProporcional,
     
-    holidaysWorkedCount,
-    holidaysWorkedAmount,
-    holidaysDetails,
+    cantidadAsuetosLaborados,
+    montoAsuetosLaborados,
+    detalleAsuetos,
     
-    overtimeTotalHours,
-    overtimeDiurnasHours,
-    overtimeNocturnasHours,
-    overtimeTotalAmount,
-    weeklyRestWorkedDays,
-    weeklyRestWorkedAmount,
+    totalHorasExtras,
+    horasExtrasDiurnas,
+    horasExtrasNocturnas,
+    montoHorasExtras,
+    diasDescansoTrabajados,
+    montoDescansoTrabajado,
     
-    grossTotal,
-    isssDeduction,
-    afpDeduction,
-    totalDeductions,
-    netTotal
+    totalBruto,
+    descuentoISSS,
+    descuentoAFP,
+    totalDeducciones,
+    totalNeto
   };
 }
 
-export function formatCurrency(amount: number): string {
+/**
+ * Formatea un número como moneda en Dólares (USD).
+ */
+export function formatearMoneda(monto: number): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
-  }).format(amount || 0);
+  }).format(monto || 0);
 }

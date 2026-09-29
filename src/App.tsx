@@ -4,95 +4,95 @@ import { LaborForm } from './components/LaborForm';
 import { LiquidationResults } from './components/LiquidationResults';
 import { LegalBaseSection } from './components/LegalBaseSection';
 import { NotesTab } from './components/NotesTab';
-import { EmployeeData } from './types';
-import { calculateLaborBenefits } from './utils/calculator';
+import { DatosEmpleado } from './types';
+import { calcularPrestacionesLaborales } from './utils/calculator';
 
-const defaultEmployeeData: EmployeeData = {
-  fullName: '',
-  companyName: '',
-  salary: 0,
-  yearsWorkedInput: 0,
-  monthsWorkedInput: 0,
-  startDate: '',
-  endDate: '',
-  vacationStartDate: '',
-  vacationEndDate: '',
-  terminationType: 'despido_injustificado',
-  informedEmployer: null,
-  aguinaldoType: 'auto',
-  workedHolidays: false,
-  selectedHolidays: [],
-  noOvertimeApply: false,
-  overtimeEntries: [],
-  workedWeeklyRestDays: 0
+const datosEmpleadoIniciales: DatosEmpleado = {
+  nombreCompleto: '',
+  empresa: '',
+  salarioMensual: 0,
+  anosLaboradosInput: 0,
+  mesesLaboradosInput: 0,
+  fechaInicio: '',
+  fechaFin: '',
+  fechaInicioVacaciones: '',
+  fechaFinVacaciones: '',
+  tipoTerminacion: 'despido_injustificado',
+  informoAlPatrono: null,
+  tipoAguinaldo: 'auto',
+  laboroAsuetos: false,
+  asuetosSeleccionados: [],
+  noAplicaHorasExtras: false,
+  registrosHorasExtras: [],
+  diasDescansoLaborados: 0
 };
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<'calculator' | 'notes'>('calculator');
-  const [data, setData] = useState<EmployeeData>(defaultEmployeeData);
-  const [hasCalculated, setHasCalculated] = useState<boolean>(false);
+  const [pestanaActiva, setPestanaActiva] = useState<'calculator' | 'notes'>('calculator');
+  const [datos, setDatos] = useState<DatosEmpleado>(datosEmpleadoIniciales);
+  const [haCalculado, setHaCalculado] = useState<boolean>(false);
 
-  const handleDataChange = (fields: Partial<EmployeeData>) => {
-    setData((prev) => ({ ...prev, ...fields }));
+  const manejarCambioDatos = (campos: Partial<DatosEmpleado>) => {
+    setDatos((prev) => ({ ...prev, ...campos }));
   };
 
-  const handleCalculate = () => {
-    setHasCalculated(true);
+  const manejarCalcular = () => {
+    setHaCalculado(true);
   };
 
-  const handleReset = () => {
-    setData(defaultEmployeeData);
-    setHasCalculated(false);
+  const manejarLimpiar = () => {
+    setDatos(datosEmpleadoIniciales);
+    setHaCalculado(false);
   };
 
-  const results = useMemo(() => {
-    return calculateLaborBenefits(data, hasCalculated);
-  }, [data, hasCalculated]);
+  const resultados = useMemo(() => {
+    return calcularPrestacionesLaborales(datos, haCalculado);
+  }, [datos, haCalculado]);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f4f7fb] text-slate-900 font-sans antialiased">
-      {/* Header */}
-      <Header activeTab={activeTab} onTabChange={setActiveTab} />
+      {/* Encabezado */}
+      <Header activeTab={pestanaActiva} onTabChange={setPestanaActiva} />
 
-      {/* Main Content */}
+      {/* Contenido Principal */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {activeTab === 'calculator' ? (
+        {pestanaActiva === 'calculator' ? (
           <div>
-            {/* Two-Column Grid: Left (Form) | Right (Results & Info) */}
+            {/* Cuadrícula de Dos Columnas: Formulario (Izquierda) | Resultados (Derecha) */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
               
-              {/* Left Column: Formulario (7 Cols) */}
+              {/* Columna Izquierda: Formulario (7 Cols) */}
               <div className="lg:col-span-7 xl:col-span-8">
                 <LaborForm
-                  data={data}
-                  results={results}
-                  onChange={handleDataChange}
-                  onCalculate={handleCalculate}
-                  onReset={handleReset}
+                  datos={datos}
+                  resultados={resultados}
+                  alCambiar={manejarCambioDatos}
+                  alCalcular={manejarCalcular}
+                  alLimpiar={manejarLimpiar}
                 />
               </div>
 
-              {/* Right Column: Liquidación & ¿Qué se calcula? (5 Cols) */}
+              {/* Columna Derecha: Liquidación & ¿Qué se calcula? (5 Cols) */}
               <div className="lg:col-span-5 xl:col-span-4 sticky top-6">
                 <LiquidationResults
-                  data={data}
-                  results={results}
-                  hasCalculated={hasCalculated}
+                  datos={datos}
+                  resultados={resultados}
+                  haCalculado={haCalculado}
                 />
               </div>
 
             </div>
 
-            {/* Bottom Full-Width Sections: Base Legal, Asuetos, Fórmulas */}
+            {/* Secciones Inferiores de Ancho Completo: Base Legal, Asuetos, Fórmulas */}
             <LegalBaseSection />
           </div>
         ) : (
-          /* Bloc de Notas Tab */
+          /* Pestaña Bloc de Notas */
           <NotesTab />
         )}
       </main>
 
-      {/* Footer */}
+      {/* Pie de Página */}
       <footer className="border-t border-slate-200 bg-white py-6 mt-12 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-4">
           <p>Calculadora de Prestaciones Laborales · El Salvador — Código de Trabajo</p>

@@ -1,34 +1,25 @@
 import React from 'react';
 import { 
   FileText, 
-  FileDown, 
-  Palmtree, 
-  Gift, 
-  Scale, 
-  Clock, 
-  Calendar, 
-  AlertCircle, 
-  FileSpreadsheet,
-  CheckCircle2,
-  Printer
+  FileDown
 } from 'lucide-react';
-import { EmployeeData, CalculationResult } from '../types';
-import { formatCurrency } from '../utils/calculator';
-import { generateLaborLiquidationPDF } from '../utils/pdfGenerator';
+import { DatosEmpleado, ResultadoLiquidacion } from '../types';
+import { formatearMoneda } from '../utils/calculator';
+import { generarLiquidacionPDF } from '../utils/pdfGenerator';
 
-interface LiquidationResultsProps {
-  data: EmployeeData;
-  results: CalculationResult;
-  hasCalculated: boolean;
+interface PropsResultadosLiquidacion {
+  datos: DatosEmpleado;
+  resultados: ResultadoLiquidacion;
+  haCalculado: boolean;
 }
 
-export const LiquidationResults: React.FC<LiquidationResultsProps> = ({
-  data,
-  results,
-  hasCalculated
+export const LiquidationResults: React.FC<PropsResultadosLiquidacion> = ({
+  datos,
+  resultados,
+  haCalculado
 }) => {
-  const handleDownloadPDF = () => {
-    generateLaborLiquidationPDF(data, results);
+  const descargarPDF = () => {
+    generarLiquidacionPDF(datos, resultados);
   };
 
   return (
@@ -46,7 +37,7 @@ export const LiquidationResults: React.FC<LiquidationResultsProps> = ({
 
         {/* Body */}
         <div className="p-5 sm:p-6">
-          {!hasCalculated ? (
+          {!haCalculado ? (
             /* Estado Inicial / Sin Resultados */
             <div className="py-14 text-center">
               <div className="w-16 h-16 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center mx-auto mb-3 text-slate-400">
@@ -68,16 +59,16 @@ export const LiquidationResults: React.FC<LiquidationResultsProps> = ({
                 <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                   <div>
                     <span className="font-bold text-slate-800 block">
-                      {data.terminationType === 'despido_injustificado' ? 'Indemnización por despido' : 'Compensación por renuncia'}
+                      {datos.tipoTerminacion === 'despido_injustificado' ? 'Indemnización por despido' : 'Compensación por renuncia'}
                     </span>
                     <span className="text-[11px] text-slate-500">
-                      {data.terminationType === 'despido_injustificado' 
-                        ? `Art. 58 CT (${results.yearsWorked}a ${results.monthsWorked}m)` 
-                        : (data.informedEmployer ? 'Ley de Renuncia' : 'Bloqueado por falta de preaviso')}
+                      {datos.tipoTerminacion === 'despido_injustificado' 
+                        ? `Art. 58 CT (${resultados.anosTrabajados}a ${resultados.mesesTrabajados}m)` 
+                        : (datos.informoAlPatrono ? 'Ley de Renuncia' : 'Bloqueado por falta de preaviso')}
                     </span>
                   </div>
-                  <span className={`font-mono font-bold text-sm ${results.indemnityBlocked ? 'text-red-500' : 'text-slate-900'}`}>
-                    {results.indemnityBlocked ? '$0.00' : formatCurrency(results.indemnityAmount)}
+                  <span className={`font-mono font-bold text-sm ${resultados.indemnizacionBloqueada ? 'text-red-500' : 'text-slate-900'}`}>
+                    {resultados.indemnizacionBloqueada ? '$0.00' : formatearMoneda(resultados.montoIndemnizacion)}
                   </span>
                 </div>
 
@@ -86,13 +77,13 @@ export const LiquidationResults: React.FC<LiquidationResultsProps> = ({
                   <div>
                     <span className="font-bold text-slate-800 block">Aguinaldo</span>
                     <span className="text-[11px] text-slate-500">
-                      {results.aguinaldoIsProportional 
-                        ? `Proporcional (${results.aguinaldoDaysWorkedInPeriod} días)` 
-                        : `Completo (${results.aguinaldoDaysEntitled} días)`}
+                      {resultados.aguinaldoEsProporcional 
+                        ? `Proporcional (${resultados.diasTrabajadosPeriodoAguinaldo} días)` 
+                        : `Completo (${resultados.diasAguinaldoDerecho} días)`}
                     </span>
                   </div>
                   <span className="font-mono font-bold text-sm text-slate-900">
-                    {formatCurrency(results.aguinaldoAmount)}
+                    {formatearMoneda(resultados.montoAguinaldo)}
                   </span>
                 </div>
 
@@ -101,51 +92,51 @@ export const LiquidationResults: React.FC<LiquidationResultsProps> = ({
                   <div>
                     <span className="font-bold text-slate-800 block">Vacación + Prima (30%)</span>
                     <span className="text-[11px] text-slate-500">
-                      {results.vacationDaysToPay.toFixed(1)} días computados
+                      {resultados.diasVacacionesPagar.toFixed(1)} días computados
                     </span>
                   </div>
                   <span className="font-mono font-bold text-sm text-slate-900">
-                    {formatCurrency(results.vacationTotalAmount)}
+                    {formatearMoneda(resultados.totalVacaciones)}
                   </span>
                 </div>
 
                 {/* 4. Asuetos */}
-                {results.holidaysWorkedCount > 0 && (
+                {resultados.cantidadAsuetosLaborados > 0 && (
                   <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                     <div>
                       <span className="font-bold text-slate-800 block">Días de asueto laborados</span>
-                      <span className="text-[11px] text-slate-500">{results.holidaysWorkedCount} día(s) (pago doble)</span>
+                      <span className="text-[11px] text-slate-500">{resultados.cantidadAsuetosLaborados} día(s) (pago doble)</span>
                     </div>
                     <span className="font-mono font-bold text-sm text-slate-900">
-                      +{formatCurrency(results.holidaysWorkedAmount)}
+                      +{formatearMoneda(resultados.montoAsuetosLaborados)}
                     </span>
                   </div>
                 )}
 
                 {/* 5. Horas Extras */}
-                {results.overtimeTotalHours > 0 && (
+                {resultados.totalHorasExtras > 0 && (
                   <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                     <div>
                       <span className="font-bold text-slate-800 block">Horas extraordinarias</span>
                       <span className="text-[11px] text-slate-500">
-                        {results.overtimeTotalHours}h (Diurnas: {results.overtimeDiurnasHours}h, Nocturnas: {results.overtimeNocturnasHours}h)
+                        {resultados.totalHorasExtras}h (Diurnas: {resultados.horasExtrasDiurnas}h, Nocturnas: {resultados.horasExtrasNocturnas}h)
                       </span>
                     </div>
                     <span className="font-mono font-bold text-sm text-slate-900">
-                      +{formatCurrency(results.overtimeTotalAmount)}
+                      +{formatearMoneda(resultados.montoHorasExtras)}
                     </span>
                   </div>
                 )}
 
                 {/* 6. Descanso Semanal */}
-                {results.weeklyRestWorkedDays > 0 && (
+                {resultados.diasDescansoTrabajados > 0 && (
                   <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                     <div>
                       <span className="font-bold text-slate-800 block">Descanso semanal laborado</span>
-                      <span className="text-[11px] text-slate-500">{results.weeklyRestWorkedDays} día(s) (Art. 173 CT)</span>
+                      <span className="text-[11px] text-slate-500">{resultados.diasDescansoTrabajados} día(s) (Art. 173 CT)</span>
                     </div>
                     <span className="font-mono font-bold text-sm text-slate-900">
-                      +{formatCurrency(results.weeklyRestWorkedAmount)}
+                      +{formatearMoneda(resultados.montoDescansoTrabajado)}
                     </span>
                   </div>
                 )}
@@ -160,7 +151,7 @@ export const LiquidationResults: React.FC<LiquidationResultsProps> = ({
                   <span className="text-[10px] text-slate-400">Total bruto devengado</span>
                 </div>
                 <span className="text-base font-extrabold text-[#0a2e5c] font-mono">
-                  {formatCurrency(results.grossTotal)}
+                  {formatearMoneda(resultados.totalBruto)}
                 </span>
               </div>
 
@@ -171,11 +162,11 @@ export const LiquidationResults: React.FC<LiquidationResultsProps> = ({
                 </span>
                 <div className="flex justify-between text-slate-600 text-[11px]">
                   <span>ISSS (3% - Tope $30.00):</span>
-                  <span className="font-mono font-semibold text-red-700">-{formatCurrency(results.isssDeduction)}</span>
+                  <span className="font-mono font-semibold text-red-700">-{formatearMoneda(resultados.descuentoISSS)}</span>
                 </div>
                 <div className="flex justify-between text-slate-600 text-[11px]">
                   <span>AFP (7.25%):</span>
-                  <span className="font-mono font-semibold text-red-700">-{formatCurrency(results.afpDeduction)}</span>
+                  <span className="font-mono font-semibold text-red-700">-{formatearMoneda(resultados.descuentoAFP)}</span>
                 </div>
               </div>
 
@@ -187,7 +178,7 @@ export const LiquidationResults: React.FC<LiquidationResultsProps> = ({
                 <div className="flex items-baseline justify-between">
                   <span className="text-xs text-sky-200/80">Monto líquido a pagar</span>
                   <span className="text-2xl font-black font-mono tracking-tight text-white">
-                    {formatCurrency(results.netTotal)}
+                    {formatearMoneda(resultados.totalNeto)}
                   </span>
                 </div>
               </div>
@@ -195,7 +186,7 @@ export const LiquidationResults: React.FC<LiquidationResultsProps> = ({
               {/* Botón de Exportar PDF */}
               <button
                 type="button"
-                onClick={handleDownloadPDF}
+                onClick={descargarPDF}
                 className="w-full flex items-center justify-center gap-2 bg-[#082447] hover:bg-[#061c37] text-white font-bold text-xs py-3 px-4 rounded-xl shadow-sm transition-all"
               >
                 <FileDown className="w-4 h-4 text-sky-300" />

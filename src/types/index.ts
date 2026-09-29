@@ -1,114 +1,112 @@
-export type TerminationType = 'despido_injustificado' | 'renuncia_voluntaria';
+export type TipoTerminacion = 'despido_injustificado' | 'renuncia_voluntaria';
 
-export interface EmployeeData {
+export interface DatosEmpleado {
   // 0. Datos de la Relación Laboral
-  fullName: string;
-  companyName: string;
-  documentId?: string;
-  position?: string;
+  nombreCompleto: string;
+  empresa: string;
+  dui?: string;
+  cargo?: string;
   
   // 1. Datos Financieros y Período
-  salary: number; // Salario mensual
-  yearsWorkedInput: number; // Años laborados
-  monthsWorkedInput: number; // Meses laborados (0-11)
-  startDate: string; // YYYY-MM-DD
-  endDate: string; // YYYY-MM-DD
-  vacationStartDate: string;
-  vacationEndDate: string;
-  vacationCalculationType?: 'completo' | 'proporcional';
+  salarioMensual: number; // Salario mensual
+  anosLaboradosInput: number; // Años laborados
+  mesesLaboradosInput: number; // Meses laborados (0-11)
+  fechaInicio: string; // YYYY-MM-DD
+  fechaFin: string; // YYYY-MM-DD
+  fechaInicioVacaciones: string;
+  fechaFinVacaciones: string;
+  tipoCalculoVacaciones?: 'completo' | 'proporcional';
   
   // 2. Causa de Finalización
-  terminationType: TerminationType;
-  informedEmployer: boolean | null; // Preaviso en renuncia
+  tipoTerminacion: TipoTerminacion;
+  informoAlPatrono: boolean | null; // Preaviso en renuncia
   
   // 3. Aguinaldo
-  aguinaldoType: 'auto' | 'completo' | 'proporcional';
+  tipoAguinaldo: 'auto' | 'completo' | 'proporcional';
   
   // 4. Días de Asueto Laborados
-  workedHolidays: boolean;
-  selectedHolidays: string[];
+  laboroAsuetos: boolean;
+  asuetosSeleccionados: string[];
   
   // 5. Jornadas Extraordinarias y Descanso Semanal
-  noOvertimeApply: boolean;
-  hasOvertime?: boolean;
-  overtimeEntries: OvertimeEntry[];
-  workedWeeklyRestDays: number; // Días de descanso semanal laborados
+  noAplicaHorasExtras: boolean;
+  registrosHorasExtras: RegistroHoraExtra[];
+  diasDescansoLaborados: number; // Días de descanso semanal laborados
 }
 
-export interface OvertimeEntry {
+export interface RegistroHoraExtra {
   id: string;
-  date: string;
-  startTime: string; // HH:mm
-  endTime: string; // HH:mm
-  hours: number;
-  type: 'diurna' | 'nocturna' | 'mixta';
-  dayType?: 'habil' | 'asueto' | 'descanso';
-  diurnasHours: number;
-  nocturnasHours: number;
-  calculatedAmount: number;
-  description?: string;
+  fecha: string;
+  horaInicio: string; // HH:mm
+  horaFin: string; // HH:mm
+  horasTotales: number;
+  tipo: 'diurna' | 'nocturna' | 'mixta';
+  horasDiurnas: number;
+  horasNocturnas: number;
+  montoCalculado: number;
+  descripcion?: string;
 }
 
-export interface HolidayItem {
+export interface DiaAsueto {
   id: string;
-  name: string;
-  dateStr: string;
-  description: string;
-  isSanMiguel?: boolean;
+  nombre: string;
+  fechaTexto: string;
+  descripcion: string;
+  esSanMiguel?: boolean;
 }
 
-export interface CalculationResult {
-  hasCalculated: boolean;
+export interface ResultadoLiquidacion {
+  haCalculado: boolean;
   
   // Antigüedad
-  yearsWorked: number;
-  monthsWorked: number;
-  daysWorked: number;
-  totalDaysWorked: number;
+  anosTrabajados: number;
+  mesesTrabajados: number;
+  diasTrabajados: number;
+  totalDiasTrabajados: number;
   
-  // Salarios
-  dailySalary: number;
-  hourlySalary: number;
+  // Salarios base
+  salarioDiario: number;
+  salarioPorHora: number;
   
   // 1. Indemnización
-  indemnityBase: number;
-  indemnityCappedDaily: number;
-  isCapped: boolean;
-  indemnityAmount: number;
-  indemnityBlocked: boolean;
-  indemnityBlockReason?: string;
+  baseIndemnizacion: number;
+  salarioDiarioTopado: number;
+  aplicaTopeLegal: boolean;
+  montoIndemnizacion: number;
+  indemnizacionBloqueada: boolean;
+  motivoBloqueoIndemnizacion?: string;
   
   // 2. Aguinaldo
-  aguinaldoDaysEntitled: number;
-  aguinaldoSeniorityBracket: string;
-  aguinaldoDaysWorkedInPeriod: number;
-  aguinaldoIsProportional: boolean;
-  aguinaldoAmount: number;
+  diasAguinaldoDerecho: number;
+  tramoAntiguedadAguinaldo: string;
+  diasTrabajadosPeriodoAguinaldo: number;
+  aguinaldoEsProporcional: boolean;
+  montoAguinaldo: number;
   
   // 3. Vacaciones
-  vacationDaysToPay: number;
-  vacationBaseAmount: number;
-  vacationPremiumAmount: number;
-  vacationTotalAmount: number;
-  vacationIsProportional: boolean;
+  diasVacacionesPagar: number;
+  montoBaseVacacion: number;
+  montoPrimaVacacional: number;
+  totalVacaciones: number;
+  vacacionEsProporcional: boolean;
   
   // 4. Asuetos
-  holidaysWorkedCount: number;
-  holidaysWorkedAmount: number;
-  holidaysDetails: { name: string; date: string; amount: number }[];
+  cantidadAsuetosLaborados: number;
+  montoAsuetosLaborados: number;
+  detalleAsuetos: { nombre: string; fecha: string; monto: number }[];
   
-  // 5. Horas Extras & Descanso
-  overtimeTotalHours: number;
-  overtimeDiurnasHours: number;
-  overtimeNocturnasHours: number;
-  overtimeTotalAmount: number;
-  weeklyRestWorkedDays: number;
-  weeklyRestWorkedAmount: number;
+  // 5. Horas Extras y Descanso
+  totalHorasExtras: number;
+  horasExtrasDiurnas: number;
+  horasExtrasNocturnas: number;
+  montoHorasExtras: number;
+  diasDescansoTrabajados: number;
+  montoDescansoTrabajado: number;
   
-  // Totales
-  grossTotal: number; // TOTAL SIN AFP NI SEGURO SOCIAL
-  isssDeduction: number; // ISSS 3%
-  afpDeduction: number; // AFP 7.25%
-  totalDeductions: number;
-  netTotal: number; // TOTAL CON LA DEDUCCIÓN DEL ISSS Y AFP
+  // 6. Totales y Deducciones
+  totalBruto: number; // TOTAL SIN AFP NI SEGURO SOCIAL
+  descuentoISSS: number; // ISSS 3% (Tope $30)
+  descuentoAFP: number; // AFP 7.25%
+  totalDeducciones: number;
+  totalNeto: number; // TOTAL CON LA DEDUCCIÓN DEL ISSS Y AFP
 }

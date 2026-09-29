@@ -1,5 +1,5 @@
 import React from 'react';
-import { LEGAL_ARTICLES, OFFICIAL_HOLIDAYS } from '../constants/holidays';
+import { ARTICULOS_LEGALES, DIAS_ASUETO_OFICIALES } from '../constants/holidays';
 
 export const LegalBaseSection: React.FC = () => {
   return (
@@ -23,15 +23,15 @@ export const LegalBaseSection: React.FC = () => {
           Los cálculos de esta herramienta se basan en el <strong>Código de Trabajo de El Salvador</strong> (Decreto Legislativo N.º 15, publicado el 31 de julio de 1972 y sus reformas).
         </p>
 
-        {/* 6 Cards Grid */}
+        {/* 6 Tarjetas */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {LEGAL_ARTICLES.map((item, idx) => (
+          {ARTICULOS_LEGALES.map((item, idx) => (
             <div key={idx} className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex flex-col justify-between">
               <div>
                 <div className="flex items-start justify-between gap-2 mb-2.5">
-                  <h4 className="text-xs font-bold text-slate-900">{item.title}</h4>
+                  <h4 className="text-xs font-bold text-slate-900">{item.titulo}</h4>
                   <div className="flex flex-wrap gap-1 shrink-0 justify-end">
-                    {item.articles.map((art, aIdx) => (
+                    {item.articulos.map((art, aIdx) => (
                       <span key={aIdx} className="px-1.5 py-0.5 bg-blue-50 text-blue-800 border border-blue-200 rounded text-[10px] font-bold">
                         {art}
                       </span>
@@ -39,7 +39,7 @@ export const LegalBaseSection: React.FC = () => {
                   </div>
                 </div>
                 <p className="text-[11px] text-slate-600 leading-relaxed">
-                  {item.text}
+                  {item.texto}
                 </p>
               </div>
             </div>
@@ -59,11 +59,11 @@ export const LegalBaseSection: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3 text-xs">
-          {OFFICIAL_HOLIDAYS.map((h) => (
+          {DIAS_ASUETO_OFICIALES.map((h) => (
             <div key={h.id} className="flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-              <span className="font-semibold text-slate-800">{h.name}</span>
-              <span className="text-slate-400 text-[11px]">— {h.dateStr}</span>
+              <span className="font-semibold text-slate-800">{h.nombre}</span>
+              <span className="text-slate-400 text-[11px]">— {h.fechaTexto}</span>
             </div>
           ))}
         </div>
