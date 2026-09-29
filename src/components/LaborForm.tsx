@@ -148,9 +148,9 @@ export const LaborForm: React.FC<LaborFormProps> = ({
               min="0"
               step="0.01"
               placeholder="0.00"
-              value={data.salary || ''}
-              onChange={(e) => onChange({ salary: parseFloat(e.target.value) || 0 })}
-              className="w-full bg-slate-50 border border-slate-300 rounded-lg pl-8 pr-3.5 py-2.5 text-sm text-slate-900 font-bold focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2e5c] focus:border-transparent transition-all"
+              value={data.salary ? data.salary : ''}
+              onChange={(e) => onChange({ salary: e.target.value === '' ? 0 : parseFloat(e.target.value) || 0 })}
+              className="w-full bg-slate-50 border border-slate-300 rounded-lg pl-8 pr-3.5 py-2.5 text-sm text-slate-900 font-bold focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2e5c] focus:border-transparent transition-all placeholder:text-slate-400 placeholder:font-normal"
               required
             />
           </div>
@@ -166,9 +166,9 @@ export const LaborForm: React.FC<LaborFormProps> = ({
               type="number"
               min="0"
               placeholder="0"
-              value={data.yearsWorkedInput ?? results.yearsWorked}
-              onChange={(e) => onChange({ yearsWorkedInput: parseInt(e.target.value) || 0 })}
-              className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2e5c] transition-all"
+              value={data.yearsWorkedInput ? data.yearsWorkedInput : ''}
+              onChange={(e) => onChange({ yearsWorkedInput: e.target.value === '' ? 0 : parseInt(e.target.value) || 0 })}
+              className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2e5c] transition-all placeholder:text-slate-400 placeholder:font-normal"
             />
           </div>
 
@@ -181,9 +181,9 @@ export const LaborForm: React.FC<LaborFormProps> = ({
               min="0"
               max="11"
               placeholder="0"
-              value={data.monthsWorkedInput ?? results.monthsWorked}
-              onChange={(e) => onChange({ monthsWorkedInput: parseInt(e.target.value) || 0 })}
-              className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2e5c] transition-all"
+              value={data.monthsWorkedInput ? data.monthsWorkedInput : ''}
+              onChange={(e) => onChange({ monthsWorkedInput: e.target.value === '' ? 0 : parseInt(e.target.value) || 0 })}
+              className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2e5c] transition-all placeholder:text-slate-400 placeholder:font-normal"
             />
             <span className="text-[11px] text-slate-400 mt-1 block">Entre 0 y 11</span>
           </div>
@@ -547,10 +547,10 @@ export const LaborForm: React.FC<LaborFormProps> = ({
               <input
                 type="number"
                 min="0"
-                value={data.workedWeeklyRestDays || ''}
-                onChange={(e) => onChange({ workedWeeklyRestDays: parseInt(e.target.value) || 0 })}
+                value={data.workedWeeklyRestDays ? data.workedWeeklyRestDays : ''}
+                onChange={(e) => onChange({ workedWeeklyRestDays: e.target.value === '' ? 0 : parseInt(e.target.value) || 0 })}
                 placeholder="0"
-                className="w-full sm:w-48 bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-900 font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2e5c]"
+                className="w-full sm:w-48 bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-900 font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2e5c] placeholder:text-slate-400 placeholder:font-normal"
               />
               <span className="text-[11px] text-slate-500 mt-1 block">
                 Doble salario — Art. 173 CT
