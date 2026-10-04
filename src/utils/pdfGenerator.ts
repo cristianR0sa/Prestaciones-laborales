@@ -2,6 +2,138 @@ import { jsPDF } from 'jspdf';
 import { DatosEmpleado, ResultadoLiquidacion } from '../types';
 import { formatearMoneda } from './calculator';
 
+/**
+ * Convierte un número a letras en español para moneda (Dólares).
+ * Ejemplo: 36980.84 -> "TREINTA Y SEIS MIL NOVECIENTOS OCHENTA 84/100 DOLARES DE LOS ESTADOS UNIDOS DE AMERICA"
+ */
+function numeroALetras(monto: number): string {
+  if (isNaN(monto) || monto < 0) return 'CERO 00/100 DOLARES DE LOS ESTADOS UNIDOS DE AMERICA';
+
+  const parteEntera = Math.floor(monto);
+  const centavos = Math.round((monto - parteEntera) * 100);
+  const centavosTexto = centavos.toString().padStart(2, '0') + '/100 DOLARES DE LOS ESTADOS UNIDOS DE AMERICA';
+
+  if (parteEntera === 0) {
+    return `CERO ${centavosTexto}`;
+  }
+
+  function convertirGrupo(n: number): string {
+    const unidades = ['', 'UN', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE'];
+    const decenas = [
+      '', 'DIEZ', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA'
+    ];
+    const especiales10 = [
+      'DIEZ', 'ONCE', 'DOCE', 'TRECE', 'CATORCE', 'QUINCE', 'DIECISEIS', 'DIECISIETE', 'DIECIOCHO', 'DIECINUEVE'
+    ];
+    const especiales20 = [
+      'VEINTE', 'VEINTIUNO', 'VEINTIDOS', 'VEINTITRES', 'VEINTICUATRO', 'VEINTICINCO', 'VEINTISEIS', 'VEINTISIETE', 'VEINTIOCHO', 'VEINTINUEVE'
+    ];
+    const centenas = [
+      '', 'CIENTO', 'DOSCIENTOS', 'TRESCIENTOS', 'CUATROCIENTOS', 'QUINIENTOS', 'SEISCIENTOS', 'SETECIENTOS', 'OCHOCIENTOS', 'NOVECIENTOS'
+    ];
+
+    let c = Math.floor(n / 100);
+    let d = Math.floor((n % 100) / 10);
+    let u = n % 10;
+    let resultado = '';
+
+    if (n === 100) return 'CIEN';
+
+    if (c > 0) {
+      resultado += centenas[c] + ' ';
+    }
+
+    let du = n % 100;
+    if (du >= 10 && du <= 19) {
+      resultado += especiales10[du - 10] + ' ';
+    } else if (du >= 20 && du <= 29) {
+      resultado += especiales20[du - 20] + ' ';
+    } else {
+      if (d > 0) {
+        resultado += decenas[d];
+        if (u > 0) {
+          resultado += ' Y ' + unidades[u] + ' ';
+        } else {
+          resultado += ' ';
+        }
+      } else if (u > 0) {
+        resultado += unidades[u] + ' ';
+      }
+    }
+
+    return resultado.trim();
+  }
+
+  let millones = Math.floor(parteEntera / 1000000);
+  let miles = Math.floor((parteEntera % 1000000) / 1000);
+  let unidades = parteEntera % 1000;
+
+  let texto = '';
+
+  if (millones > 0) {
+    if (millones === 1) {
+      texto += 'UN MILLON ';
+    } else {
+      texto += convertirGrupo(millones) + ' MILLONES ';
+    }
+  }
+
+  if (miles > 0) {
+    if (miles === 1) {
+      texto += 'MIL ';
+    } else {
+      texto += convertirGrupo(miles) + ' MIL ';
+    }
+  }
+
+  if (unidades > 0) {
+    texto += convertirGrupo(unidades) + ' ';
+  }
+
+  return `${texto.trim()} ${centavosTexto}`.replace(/\s+/g, ' ').toUpperCase();
+}
+
+/**
+ * Formatea una fecha YYYY-MM-DD a formato extendido: "01 de enero de 2006"
+ */
+function formatearFechaTexto(fechaStr?: string): string {
+  if (!fechaStr) return 'No especificada';
+  const partes = fechaStr.split('-');
+  if (partes.length !== 3) return fechaStr;
+
+  const meses = [
+    'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+  ];
+
+  const dia = partes[2].padStart(2, '0');
+  const mesIndex = parseInt(partes[1], 10) - 1;
+  const anio = partes[0];
+
+  if (mesIndex >= 0 && mesIndex < 12) {
+    return `${dia} de ${meses[mesIndex]} de ${anio}`;
+  }
+  return fechaStr;
+}
+
+/**
+ * Calcula la retención mensual aproximada de ISR según la tabla oficial de El Salvador
+ */
+function calcularISR(remuneracionGravada: number, descuentoISSS: number, descuentoAFP: number): number {
+  const baseImponible = remuneracionGravada - descuentoISSS - descuentoAFP;
+  if (baseImponible <= 472.00) return 0.00;
+  if (baseImponible <= 895.24) {
+    return (baseImponible - 472.00) * 0.10 + 17.67;
+  }
+  if (baseImponible <= 2038.10) {
+    return (baseImponible - 895.24) * 0.20 + 60.00;
+  }
+  return (baseImponible - 2038.10) * 0.30 + 288.57;
+}
+
+/**
+ * Genera el documento PDF formal de Liquidación Laboral en 2 páginas exactas según el modelo solicitado.
+ */
 export function generarLiquidacionPDF(datos: DatosEmpleado, resultados: ResultadoLiquidacion) {
   const doc = new jsPDF({
     orientation: 'portrait',
@@ -10,288 +142,447 @@ export function generarLiquidacionPDF(datos: DatosEmpleado, resultados: Resultad
   });
 
   const anchoPagina = doc.internal.pageSize.getWidth();
-  const margen = 14;
+  const altoPagina = doc.internal.pageSize.getHeight();
+  const margen = 18;
   const anchoContenido = anchoPagina - (margen * 2);
-  let y = 14;
 
-  // Encabezado
-  doc.setFillColor(10, 46, 92); // #0a2e5c
-  doc.rect(margen, y, anchoContenido, 22, 'F');
+  const ahora = new Date();
+  const fechaGeneracionTexto = `Generado el ${ahora.toLocaleDateString('es-SV')} ${ahora.toLocaleTimeString('es-SV', { hour: '2-digit', minute: '2-digit' })}`;
 
-  doc.setTextColor(255, 255, 255);
+  // Cálculos de remuneración gravada y exenta
+  const remuneracionGravada = resultados.baseCotizableISSS_AFP;
+  const montoExento = (resultados.indemnizacionBloqueada ? 0 : resultados.montoIndemnizacion) + resultados.montoAguinaldo;
+  
+  // Retención de ISR calculada
+  const retencionISR = Number(calcularISR(remuneracionGravada, resultados.descuentoISSS, resultados.descuentoAFP).toFixed(2));
+  const totalDeduccionesCalculado = resultados.descuentoISSS + resultados.descuentoAFP + retencionISR;
+  const montoNetoFinal = Math.max(0, resultados.totalBruto - totalDeduccionesCalculado);
+
+  const textoCausa = datos.tipoTerminacion === 'despido_injustificado' 
+    ? 'Despido sin causa justificada' 
+    : `Renuncia voluntaria (${datos.informoAlPatrono ? 'Con preaviso legal' : 'Sin preaviso'})`;
+
+  // ==========================================
+  // PÁGINA 1
+  // ==========================================
+  let y = 20;
+
+  // Encabezado Principal
+  doc.setTextColor(10, 46, 92); // Azul Marino #0a2e5c
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(13);
-  doc.text('REPÚBLICA DE EL SALVADOR', anchoPagina / 2, y + 7, { align: 'center' });
-  doc.setFontSize(10);
+  doc.setFontSize(11.5);
+  doc.text('COMPROBANTE DE LIQUIDACION DE PRESTACIONES LABORALES', anchoPagina / 2, y, { align: 'center' });
+
+  y += 5;
   doc.setFont('helvetica', 'normal');
-  doc.text('HOJA DE LIQUIDACIÓN Y CÁLCULO DE PRESTACIONES LABORALES', anchoPagina / 2, y + 13, { align: 'center' });
-  doc.setFontSize(8);
-  doc.text('Conforme al Código de Trabajo y Leyes Laborales Vigentes', anchoPagina / 2, y + 18, { align: 'center' });
-
-  y += 27;
-
-  // Cuadro de Datos Generales
-  doc.setFillColor(248, 250, 252);
-  doc.setDrawColor(203, 213, 225);
-  doc.roundedRect(margen, y, anchoContenido, 42, 2, 2, 'FD');
-
-  doc.setTextColor(15, 23, 42);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.text('1. DATOS GENERALES Y CONTRACTUALES', margen + 4, y + 6);
-
   doc.setFontSize(8.5);
-  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(2, 132, 199); // Celeste #0284c7
+  doc.text('Republica de El Salvador', anchoPagina / 2, y, { align: 'center' });
 
-  // Columna 1
-  const col1X = margen + 4;
-  doc.text(`Trabajador:`, col1X, y + 13);
-  doc.setFont('helvetica', 'bold');
-  doc.text(`${datos.nombreCompleto || 'No especificado'}`, col1X + 22, y + 13);
+  y += 5;
+  // Línea divisoria superior en azul marino / celeste
+  doc.setDrawColor(2, 132, 199); // Celeste #0284c7
+  doc.setLineWidth(0.6);
+  doc.line(margen, y, margen + anchoContenido, y);
 
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Empresa / Patrono:`, col1X, y + 21);
-  doc.setFont('helvetica', 'bold');
-  doc.text(`${datos.empresa || 'Empresa Empleadora'}`, col1X + 30, y + 21);
+  y += 8;
 
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Tipo Terminación:`, col1X, y + 29);
+  // I. Datos de las partes
   doc.setFont('helvetica', 'bold');
-  const etiquetaTerminacion = datos.tipoTerminacion === 'despido_injustificado' 
-    ? 'Despido Injustificado (Art. 58 C.T.)' 
-    : `Renuncia Voluntaria (${datos.informoAlPatrono ? 'Con Preaviso' : 'SIN Preaviso - Bloqueado'})`;
-  doc.text(etiquetaTerminacion, col1X + 28, y + 29);
+  doc.setFontSize(9.5);
+  doc.setTextColor(10, 46, 92); // Azul marino
+  doc.text('I. Datos de las partes', margen, y);
 
-  // Columna 2
-  const col2X = margen + 105;
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Fecha Inicio:`, col2X, y + 13);
-  doc.setFont('helvetica', 'bold');
-  doc.text(`${datos.fechaInicio || 'N/A'}`, col2X + 22, y + 13);
+  y += 6;
+  const colIzqLabel = margen;
+  const colIzqVal = margen + 32;
+  const colDerLabel = margen + 92;
+  const colDerVal = margen + 124;
+  const interlineadoDatos = 6;
 
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Fecha Finalización:`, col2X, y + 21);
-  doc.setFont('helvetica', 'bold');
-  doc.text(`${datos.fechaFin || 'N/A'}`, col2X + 30, y + 21);
+  doc.setFontSize(8);
 
+  // Fila 1: Trabajador & Patrono
   doc.setFont('helvetica', 'normal');
-  doc.text(`Tiempo Laborado:`, col2X, y + 29);
+  doc.setTextColor(100, 116, 139);
+  doc.text('Persona trabajadora', colIzqLabel, y);
   doc.setFont('helvetica', 'bold');
-  doc.text(`${resultados.anosTrabajados} años, ${resultados.mesesTrabajados} meses, ${resultados.diasTrabajados} días`, col2X + 28, y + 29);
+  doc.setTextColor(10, 46, 92);
+  const nombreTrabajador = (datos.nombreCompleto || 'NO ESPECIFICADO').toUpperCase();
+  doc.text(nombreTrabajador, colIzqVal, y);
 
   doc.setFont('helvetica', 'normal');
-  doc.text(`Salario Mensual:`, col2X, y + 37);
+  doc.setTextColor(100, 116, 139);
+  doc.text('Patrono', colDerLabel, y);
   doc.setFont('helvetica', 'bold');
-  doc.text(`${formatearMoneda(datos.salarioMensual)} (Diario: ${formatearMoneda(resultados.salarioDiario)})`, col2X + 26, y + 37);
-
-  y += 47;
-
-  // Sección 2: Desglose
   doc.setTextColor(15, 23, 42);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.text('2. LIQUIDACIÓN DETALLADA DE PRESTACIONES LABORALES', margen, y);
-  y += 3;
+  doc.text(datos.empresa || 'Empresa Empleadora', colDerVal, y);
 
-  // Tabla Header
-  doc.setFillColor(10, 46, 92);
-  doc.rect(margen, y, anchoContenido, 7, 'F');
-  doc.setTextColor(255, 255, 255);
+  y += interlineadoDatos;
+
+  // Fila 2: Cargo & Salario
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 116, 139);
+  doc.text('Cargo desempenado', colIzqLabel, y);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(15, 23, 42);
+  doc.text(datos.cargo || 'Personal de Operaciones', colIzqVal, y);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 116, 139);
+  doc.text('Salario mensual', colDerLabel, y);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(10, 46, 92);
+  doc.text(formatearMoneda(datos.salarioMensual), colDerVal, y);
+
+  y += interlineadoDatos;
+
+  // Fila 3: Fecha Ingreso & Fecha Terminación
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 116, 139);
+  doc.text('Fecha de ingreso', colIzqLabel, y);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(15, 23, 42);
+  doc.text(formatearFechaTexto(datos.fechaInicio), colIzqVal, y);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 116, 139);
+  doc.text('Fecha de terminacion', colDerLabel, y);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(15, 23, 42);
+  doc.text(formatearFechaTexto(datos.fechaFin), colDerVal, y);
+
+  y += interlineadoDatos;
+
+  // Fila 4: Antigüedad & Causa
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 116, 139);
+  doc.text('Antiguedad reconocida', colIzqLabel, y);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(10, 46, 92);
+  doc.text(`${resultados.anosTrabajados} anios, ${resultados.mesesTrabajados} meses`, colIzqVal, y);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 116, 139);
+  doc.text('Causa de terminacion', colDerLabel, y);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(15, 23, 42);
+  doc.text(textoCausa, colDerVal, y);
+
+  y += 10;
+
+  // II. Desglose de prestaciones liquidadas
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9.5);
+  doc.setTextColor(10, 46, 92); // Azul marino
+  doc.text('II. Desglose de prestaciones liquidadas', margen, y);
+
+  y += 5;
+
+  // Encabezado Tabla Prestaciones con fondo celeste suave
+  doc.setFillColor(240, 249, 255); // #f0f9ff (Celeste suave)
+  doc.rect(margen, y, anchoContenido, 6.5, 'F');
+  doc.setDrawColor(2, 132, 199); // #0284c7 (Borde celeste)
+  doc.setLineWidth(0.4);
+  doc.line(margen, y, margen + anchoContenido, y);
+  doc.line(margen, y + 6.5, margen + anchoContenido, y + 6.5);
+
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
-  doc.text('Concepto Legal', margen + 4, y + 4.5);
-  doc.text('Base de Cálculo / Días', margen + 90, y + 4.5);
-  doc.text('Monto Devengado', margen + anchoContenido - 4, y + 4.5, { align: 'right' });
+  doc.setTextColor(10, 46, 92); // Azul marino
+  doc.text('Concepto', margen + 2, y + 4.5);
+  doc.text('Base legal', margen + 78, y + 4.5);
+  doc.text('Monto', margen + anchoContenido - 2, y + 4.5, { align: 'right' });
 
-  y += 7;
+  y += 6.5;
 
-  const imprimirFila = (titulo: string, subtitulo: string, detalle: string, monto: number, bloqueado = false, fondo = false) => {
-    const altoFila = 11;
-    if (fondo) {
-      doc.setFillColor(248, 250, 252);
-      doc.rect(margen, y, anchoContenido, altoFila, 'F');
-    }
-    doc.setDrawColor(226, 232, 240);
-    doc.line(margen, y + altoFila, margen + anchoContenido, y + altoFila);
-
-    doc.setTextColor(15, 23, 42);
-    doc.setFont('helvetica', 'bold');
+  // Función para imprimir filas de tabla
+  const imprimirFilaPrestacion = (concepto: string, baseLegal: string, monto: number, bloqueado = false) => {
+    const altoFila = 6;
+    doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
-    doc.text(titulo, margen + 4, y + 4.5);
+    doc.setTextColor(30, 41, 59);
+    doc.text(concepto, margen + 2, y + 4.2);
+
+    doc.setTextColor(100, 116, 139);
+    doc.text(baseLegal, margen + 78, y + 4.2);
 
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7);
-    doc.setTextColor(100, 116, 139);
-    doc.text(subtitulo, margen + 4, y + 8.5);
-
-    doc.setTextColor(30, 41, 59);
-    doc.text(detalle, margen + 90, y + 6);
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8.5);
+    doc.setTextColor(15, 23, 42);
     if (bloqueado) {
       doc.setTextColor(220, 38, 38);
-      doc.text('$0.00 (Bloqueado)', margen + anchoContenido - 4, y + 6, { align: 'right' });
+      doc.text('$0.00', margen + anchoContenido - 2, y + 4.2, { align: 'right' });
     } else {
-      doc.setTextColor(15, 23, 42);
-      doc.text(formatearMoneda(monto), margen + anchoContenido - 4, y + 6, { align: 'right' });
+      doc.text(formatearMoneda(monto), margen + anchoContenido - 2, y + 4.2, { align: 'right' });
     }
 
+    doc.setDrawColor(224, 242, 254); // Celeste muy suave para líneas divisoras
+    doc.setLineWidth(0.3);
+    doc.line(margen, y + altoFila, margen + anchoContenido, y + altoFila);
     y += altoFila;
   };
 
-  // Fila 1: Indemnización
-  if (datos.tipoTerminacion === 'despido_injustificado') {
-    const notaTope = resultados.aplicaTopeLegal ? ' (Tope 4 Salarios Mínimos Comercio: $1,460.00)' : '';
-    imprimirFila(
-      'Indemnización por Despido Injustificado',
-      `Art. 58 Código de Trabajo${notaTope}`,
-      `${resultados.anosTrabajados} años + ${resultados.mesesTrabajados}m ${resultados.diasTrabajados}d`,
-      resultados.montoIndemnizacion,
-      false,
-      false
-    );
-  } else {
-    imprimirFila(
-      'Compensación por Renuncia Voluntaria',
-      datos.informoAlPatrono 
-        ? 'Ley de Prestación por Renuncia Voluntaria (15 días/año)'
-        : 'BLOQUEADO: No informó con preaviso legal al patrono',
-      datos.informoAlPatrono ? `${resultados.anosTrabajados} años laborados` : 'Requisito incumplido',
-      resultados.montoIndemnizacion,
-      resultados.indemnizacionBloqueada,
-      false
-    );
-  }
-
-  // Fila 2: Aguinaldo
-  const descAguinaldo = resultados.aguinaldoEsProporcional 
-    ? `Proporcional (${resultados.diasTrabajadosPeriodoAguinaldo} días trabajados en periodo)`
-    : `Completo (${resultados.diasAguinaldoDerecho} días de salario)`;
-  imprimirFila(
-    'Aguinaldo',
-    `Art. 196-202 Código de Trabajo | Rango: ${resultados.tramoAntiguedadAguinaldo}`,
-    descAguinaldo,
-    resultados.montoAguinaldo,
-    false,
-    true
+  // Filas de conceptos
+  imprimirFilaPrestacion('Vacacion proporcional', 'Arts. 177 y 187 CT', resultados.totalVacaciones);
+  imprimirFilaPrestacion('Aguinaldo proporcional', 'Arts. 196-198 CT', resultados.montoAguinaldo);
+  
+  const etiquetaIndemnizacion = datos.tipoTerminacion === 'despido_injustificado'
+    ? 'Indemnizacion por despido injustificado'
+    : 'Compensacion por renuncia voluntaria';
+  imprimirFilaPrestacion(
+    etiquetaIndemnizacion, 
+    datos.tipoTerminacion === 'despido_injustificado' ? 'Art. 58 CT' : 'Ley de Renuncia Voluntaria', 
+    resultados.montoIndemnizacion,
+    resultados.indemnizacionBloqueada
   );
 
-  // Fila 3: Vacaciones
-  const descVacacion = `Proporcional (${resultados.diasVacacionesPagar.toFixed(1)} días + 30% prima)`;
-  imprimirFila(
-    'Vacaciones Anuales + Prima Vacacional (30%)',
-    'Art. 177 y 182 Código de Trabajo (15 días descanso remunerado + 30% recargo)',
-    descVacacion,
-    resultados.totalVacaciones,
-    false,
-    false
-  );
+  imprimirFilaPrestacion('Horas extras diurnas', 'Art. 169 CT', resultados.horasExtrasDiurnas * ((datos.salarioMensual / 30 / 8) * 2));
+  imprimirFilaPrestacion('Horas extras nocturnas', 'Arts. 168 y 169 CT', resultados.horasExtrasNocturnas * ((datos.salarioMensual / 30 / 8) * 2.5));
+  imprimirFilaPrestacion('Dias de asueto laborados', 'Art. 192 CT', resultados.montoAsuetosLaborados);
+  imprimirFilaPrestacion('Dias de descanso semanal laborados', 'Arts. 175 y 176 CT', resultados.montoDescansoTrabajado);
 
-  // Fila 4: Días de Asueto
-  const descAsueto = resultados.cantidadAsuetosLaborados > 0 
-    ? `${resultados.cantidadAsuetosLaborados} día(s) laborado(s) con recargo 100% (pago doble)`
-    : 'No laboró en días de asueto';
-  imprimirFila(
-    'Remuneración por Días de Asueto Laborados',
-    'Art. 192 Código de Trabajo (Salario ordinario + recargo 100%)',
-    descAsueto,
-    resultados.montoAsuetosLaborados,
-    false,
-    true
-  );
+  // Total Devengado Bruto con líneas azul marino
+  y += 1;
+  doc.setDrawColor(10, 46, 92); // Azul marino
+  doc.setLineWidth(0.6);
+  doc.line(margen, y, margen + anchoContenido, y);
+  y += 4.5;
 
-  // Fila 5: Horas Extras
-  const descHE = resultados.totalHorasExtras > 0 
-    ? `Total: ${resultados.totalHorasExtras}h (Diurnas: ${resultados.horasExtrasDiurnas}h, Nocturnas: ${resultados.horasExtrasNocturnas}h)`
-    : 'Sin horas extras pendientes';
-  imprimirFila(
-    'Horas Extraordinarias No Pagadas',
-    'Art. 168-170 Código de Trabajo (Diurna +100% / Nocturna +150%)',
-    descHE,
-    resultados.montoHorasExtras,
-    false,
-    false
-  );
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(10, 46, 92); // Azul marino
+  doc.text('TOTAL DEVENGADO (BRUTO)', margen + 2, y);
+  doc.text(formatearMoneda(resultados.totalBruto), margen + anchoContenido - 2, y, { align: 'right' });
+
+  y += 2;
+  doc.setDrawColor(2, 132, 199); // Celeste
+  doc.setLineWidth(0.4);
+  doc.line(margen, y, margen + anchoContenido, y);
+
+  y += 8;
+
+  // III. Deducciones de ley y neto a pagar
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9.5);
+  doc.setTextColor(10, 46, 92); // Azul marino
+  doc.text('III. Deducciones de ley y neto a pagar', margen, y);
+
+  y += 4.5;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(100, 116, 139);
+  doc.text(`Remuneracion gravada: ${formatearMoneda(remuneracionGravada)}. Monto exento de ISR y de cotizaciones: ${formatearMoneda(montoExento)} (indemnizacion y aguinaldo).`, margen, y);
 
   y += 4;
 
-  // Totales y Deducciones
-  const altoCajaTotales = 36;
-  doc.setFillColor(241, 245, 249);
-  doc.roundedRect(margen, y, anchoContenido, altoCajaTotales, 2, 2, 'F');
-  doc.setDrawColor(203, 213, 225);
-  doc.roundedRect(margen, y, anchoContenido, altoCajaTotales, 2, 2, 'D');
+  // Filas de deducciones con líneas celestes
+  const imprimirFilaDeduccion = (concepto: string, baseLegal: string, monto: number) => {
+    const altoFila = 6;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(30, 41, 59);
+    doc.text(concepto, margen + 2, y + 4.2);
 
-  doc.setFontSize(8.5);
+    doc.setTextColor(100, 116, 139);
+    doc.text(baseLegal, margen + 78, y + 4.2);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(15, 23, 42);
+    const textoMonto = monto > 0 ? `-${formatearMoneda(monto)}` : '$0.00';
+    doc.text(textoMonto, margen + anchoContenido - 2, y + 4.2, { align: 'right' });
+
+    doc.setDrawColor(224, 242, 254); // Celeste suave
+    doc.setLineWidth(0.3);
+    doc.line(margen, y + altoFila, margen + anchoContenido, y + altoFila);
+    y += altoFila;
+  };
+
+  imprimirFilaDeduccion('Cotizacion ISSS (trabajador)', 'Reglamento del ISSS, Art. 29', resultados.descuentoISSS);
+  imprimirFilaDeduccion('Cotizacion AFP (trabajador)', 'Ley del Sistema de Ahorro para Pensiones', resultados.descuentoAFP);
+  imprimirFilaDeduccion('Retencion de ISR', 'Art. 37 Ley de ISR', retencionISR);
+
+  // Total deducciones
+  y += 1;
+  doc.setDrawColor(186, 230, 253); // Celeste #bae6fd
+  doc.setLineWidth(0.4);
+  doc.line(margen, y, margen + anchoContenido, y);
+  y += 4.5;
+
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(15, 23, 42);
-  doc.text('TOTAL BRUTO (Sin Descuentos ISSS ni AFP):', margen + 6, y + 8);
-  doc.setFontSize(9.5);
-  doc.setTextColor(10, 46, 92);
-  doc.text(formatearMoneda(resultados.totalBruto), margen + 92, y + 8);
-
   doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(71, 85, 105);
-  doc.text('(-) Deducción ISSS (3.00% - Tope Legal $30.00):', margen + 6, y + 16);
-  doc.text(`- ${formatearMoneda(resultados.descuentoISSS)}`, margen + 92, y + 16);
+  doc.setTextColor(10, 46, 92); // Azul marino
+  doc.text('Total de deducciones', margen + 2, y);
+  doc.text(`-${formatearMoneda(totalDeduccionesCalculado)}`, margen + anchoContenido - 2, y, { align: 'right' });
 
-  doc.text('(-) Deducción AFP (7.25% Fondo de Pensiones):', margen + 6, y + 23);
-  doc.text(`- ${formatearMoneda(resultados.descuentoAFP)}`, margen + 92, y + 23);
+  y += 2;
+  doc.setDrawColor(2, 132, 199); // Celeste
+  doc.setLineWidth(0.5);
+  doc.line(margen, y, margen + anchoContenido, y);
 
-  // Total Líquido Destacado
-  doc.setFillColor(10, 46, 92);
-  doc.rect(margen + 105, y + 4, anchoContenido - 105 - 4, altoCajaTotales - 8, 'F');
-  
-  doc.setTextColor(255, 255, 255);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
-  doc.text('TOTAL LÍQUIDO A RECIBIR:', margen + 110, y + 13);
+  y += 4;
+
+  // Monto Neto a Pagar (Barra Celeste / Azul)
+  doc.setFillColor(240, 249, 255); // Fondo celeste suave #f0f9ff
+  doc.rect(margen, y, anchoContenido, 8, 'F');
+  doc.setDrawColor(2, 132, 199); // Borde celeste #0284c7
+  doc.setLineWidth(0.6);
+  doc.rect(margen, y, anchoContenido, 8, 'D');
+
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(13);
-  doc.text(formatearMoneda(resultados.totalNeto), margen + 110, y + 23);
+  doc.setFontSize(8.5);
+  doc.setTextColor(10, 46, 92); // Azul marino
+  doc.text('MONTO NETO A PAGAR', margen + 3, y + 5.3);
+  doc.setFontSize(10.5);
+  doc.setTextColor(2, 132, 199); // Celeste destacado
+  doc.text(formatearMoneda(montoNetoFinal), margen + anchoContenido - 3, y + 5.5, { align: 'right' });
 
-  y += altoCajaTotales + 6;
+  y += 12;
 
-  // Finiquito Legal
-  doc.setFontSize(6.5);
+  // Monto neto en letras (Caja con borde celeste suave)
+  doc.setFillColor(248, 250, 252);
+  doc.roundedRect(margen, y, anchoContenido, 13, 1, 1, 'F');
+  doc.setDrawColor(186, 230, 253); // Celeste #bae6fd
+  doc.setLineWidth(0.4);
+  doc.roundedRect(margen, y, anchoContenido, 13, 1, 1, 'D');
+
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(100, 116, 139);
-  const textoFiniquito = 
-    'DECLARACIÓN Y FINIQUITO: Con la recepción de la cantidad líquida descrita en la presente liquidación, el trabajador declara estar plenamente ' +
-    'satisfecho en todos sus derechos laborales, salarios, prestaciones legales y contractuales devengadas durante la vigencia de la relación laboral, ' +
-    'conforme a las disposiciones del Código de Trabajo de la República de El Salvador, no teniendo reclamo posterior alguno contra el patrono.';
-  const textoDividido = doc.splitTextToSize(textoFiniquito, anchoContenido);
-  doc.text(textoDividido, margen, y);
+  doc.setFontSize(7);
+  doc.setTextColor(2, 132, 199); // Celeste
+  doc.text('Monto neto en letras', margen + 3, y + 4.5);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(10, 46, 92); // Azul marino
+  const textoLetras = numeroALetras(montoNetoFinal);
+  doc.text(textoLetras, margen + 3, y + 9.5);
+
+  // Pie de Página - Página 1
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(148, 163, 184);
+  doc.text(fechaGeneracionTexto, margen, altoPagina - 12);
+  doc.text('1 / 2', anchoPagina - margen, altoPagina - 12, { align: 'right' });
+
+  // ==========================================
+  // PÁGINA 2
+  // ==========================================
+  doc.addPage();
+  y = 20;
+
+  // Encabezado Principal Página 2
+  doc.setTextColor(10, 46, 92); // Azul marino
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11.5);
+  doc.text('COMPROBANTE DE LIQUIDACION DE PRESTACIONES LABORALES', anchoPagina / 2, y, { align: 'center' });
+
+  y += 5;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(2, 132, 199); // Celeste
+  doc.text('Republica de El Salvador', anchoPagina / 2, y, { align: 'center' });
+
+  y += 5;
+  doc.setDrawColor(2, 132, 199); // Celeste
+  doc.setLineWidth(0.6);
+  doc.line(margen, y, margen + anchoContenido, y);
+
+  y += 10;
+
+  // IV. Declaración
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9.5);
+  doc.setTextColor(10, 46, 92); // Azul marino
+  doc.text('IV. Declaracion', margen, y);
+
+  y += 5;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(30, 41, 59);
+  
+  const textoDeclaracion = 
+    `La persona trabajadora ${nombreTrabajador} declara haber recibido el detalle de las prestaciones economicas ` +
+    `que anteceden, calculadas conforme al Codigo de Trabajo de El Salvador, asi como el desglose de las retenciones de ley aplicadas ` +
+    `y el monto neto resultante. Este comprobante se suscribe en la fecha que se indica al pie de las firmas.`;
+  
+  const lineasDeclaracion = doc.splitTextToSize(textoDeclaracion, anchoContenido);
+  doc.text(lineasDeclaracion, margen, y);
+
+  y += (lineasDeclaracion.length * 4.5) + 20;
+
+  // Firmas en dos columnas con líneas azul marino
+  const anchoBloqueFirma = (anchoContenido - 15) / 2;
+  const colFirma1 = margen;
+  const colFirma2 = margen + anchoBloqueFirma + 15;
+
+  // Líneas de firma en azul marino
+  doc.setDrawColor(10, 46, 92);
+  doc.setLineWidth(0.6);
+  doc.line(colFirma1, y, colFirma1 + anchoBloqueFirma, y);
+  doc.line(colFirma2, y, colFirma2 + anchoBloqueFirma, y);
+
+  y += 5;
+
+  // Títulos de Firmas
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(10, 46, 92);
+  doc.text('Persona trabajadora', colFirma1 + (anchoBloqueFirma / 2), y, { align: 'center' });
+  doc.text('Patrono o representante legal', colFirma2 + (anchoBloqueFirma / 2), y, { align: 'center' });
+
+  y += 8;
+
+  // Campos de texto de firma
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(51, 65, 85);
+
+  doc.text('Nombre: _________________________________', colFirma1, y);
+  doc.text('Nombre: _________________________________', colFirma2, y);
+
+  y += 6;
+  doc.text('DUI: ____________________________________', colFirma1, y);
+  doc.text('DUI: ____________________________________', colFirma2, y);
+
+  y += 6;
+  doc.text('Fecha: __________________________________', colFirma1, y);
+  doc.text('Fecha: __________________________________', colFirma2, y);
 
   y += 18;
 
-  // Firmas
-  const anchoCajaFirma = (anchoContenido - 20) / 2;
-  
-  doc.setDrawColor(148, 163, 184);
-  doc.line(margen + 5, y + 16, margen + 5 + anchoCajaFirma, y + 16);
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(15, 23, 42);
-  doc.text('FIRMA DEL TRABAJADOR', margen + 5 + (anchoCajaFirma / 2), y + 21, { align: 'center' });
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Nombre: ${datos.nombreCompleto || '__________________________'}`, margen + 5 + (anchoCajaFirma / 2), y + 25, { align: 'center' });
+  // Cuadro: Advertencia Legal
+  doc.setFillColor(254, 252, 232); // #fefce8 (Amarillo suave)
+  doc.setDrawColor(245, 158, 11); // #f59e0b (Borde Ámbar)
+  doc.setLineWidth(0.6);
+  doc.roundedRect(margen, y, anchoContenido, 36, 1.5, 1.5, 'FD');
 
-  const colPatronoX = margen + 15 + anchoCajaFirma;
-  doc.line(colPatronoX, y + 16, colPatronoX + anchoCajaFirma, y + 16);
-  doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(15, 23, 42);
-  doc.text('FIRMA Y SELLO DEL PATRONO', colPatronoX + (anchoCajaFirma / 2), y + 21, { align: 'center' });
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Empresa: ${datos.empresa || '__________________________'}`, colPatronoX + (anchoCajaFirma / 2), y + 25, { align: 'center' });
-  doc.text('Representante Legal / RRHH', colPatronoX + (anchoCajaFirma / 2), y + 29, { align: 'center' });
+  doc.setFontSize(8.5);
+  doc.setTextColor(146, 64, 14); // #92400e
+  doc.text('Advertencia legal', margen + 4, y + 6);
 
-  // Guardar PDF
-  const nombreArchivo = `Liquidacion_${(datos.nombreCompleto || 'Empleado').replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`;
-  doc.save(nombreArchivo);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(69, 26, 3); // #451a03
+
+  const textoAdvertencia = 
+    `Este documento es un comprobante informativo del calculo de prestaciones y NO constituye el finiquito laboral. Conforme al Art. 402 inciso ` +
+    `2 del Codigo de Trabajo, la renuncia, la terminacion por mutuo consentimiento o el recibo de pago de prestaciones por despido sin causa ` +
+    `legal solo tienen valor probatorio si constan en hojas extendidas por la Direccion General de Inspeccion de Trabajo o por los jueces con ` +
+    `competencia en materia laboral, utilizadas dentro de los diez dias siguientes a su expedicion, o bien en documento privado autenticado ` +
+    `ante notario. Se recomienda asesoria legal profesional antes de suscribir cualquier finiquito.`;
+
+  const lineasAdvertencia = doc.splitTextToSize(textoAdvertencia, anchoContenido - 8);
+  doc.text(lineasAdvertencia, margen + 4, y + 11.5);
+
+  // Pie de Página - Página 2
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(148, 163, 184);
+  doc.text(fechaGeneracionTexto, margen, altoPagina - 12);
+  doc.text('2 / 2', anchoPagina - margen, altoPagina - 12, { align: 'right' });
+
+  // Guardar archivo PDF
+  const nombreLimpio = (datos.nombreCompleto || 'Liquidacion').replace(/\s+/g, '_');
+  const fechaArchivo = ahora.toISOString().slice(0, 10);
+  doc.save(`Comprobante_Liquidacion_${nombreLimpio}_${fechaArchivo}.pdf`);
 }

@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { DatosEmpleado, ResultadoLiquidacion, RegistroHoraExtra } from '../types';
 import { DIAS_ASUETO_OFICIALES } from '../constants/holidays';
-import { deducirTipoHoraExtra, formatearMoneda } from '../utils/calculator';
+import { deducirTipoHoraExtra, formatearMoneda, calcularDiferenciaFechas } from '../utils/calculator';
 
 interface PropsFormularioLaboral {
   datos: DatosEmpleado;
@@ -25,6 +25,33 @@ export const LaborForm: React.FC<PropsFormularioLaboral> = ({
   alCalcular,
   alLimpiar
 }) => {
+  // Manejadores sincronizados de fechas
+  const manejarCambioFechaInicio = (nuevaFechaInicio: string) => {
+    if (nuevaFechaInicio && datos.fechaFin) {
+      const antiguedad = calcularDiferenciaFechas(nuevaFechaInicio, datos.fechaFin);
+      alCambiar({ 
+        fechaInicio: nuevaFechaInicio,
+        anosLaboradosInput: antiguedad.anos,
+        mesesLaboradosInput: antiguedad.meses
+      });
+    } else {
+      alCambiar({ fechaInicio: nuevaFechaInicio });
+    }
+  };
+
+  const manejarCambioFechaFin = (nuevaFechaFin: string) => {
+    if (datos.fechaInicio && nuevaFechaFin) {
+      const antiguedad = calcularDiferenciaFechas(datos.fechaInicio, nuevaFechaFin);
+      alCambiar({ 
+        fechaFin: nuevaFechaFin,
+        anosLaboradosInput: antiguedad.anos,
+        mesesLaboradosInput: antiguedad.meses
+      });
+    } else {
+      alCambiar({ fechaFin: nuevaFechaFin });
+    }
+  };
+
   // Estado modal de Horas Extras
   const [mostrarModalHorasExtras, setMostrarModalHorasExtras] = useState(false);
   const [fechaHE, setFechaHE] = useState<string>(datos.fechaFin || new Date().toISOString().slice(0, 10));
@@ -87,7 +114,7 @@ export const LaborForm: React.FC<PropsFormularioLaboral> = ({
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
               NOMBRE DEL TRABAJADOR
@@ -113,6 +140,51 @@ export const LaborForm: React.FC<PropsFormularioLaboral> = ({
               className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2e5c] focus:border-transparent transition-all"
             />
           </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              CARGO DESEMPEÑADO
+            </label>
+            <input
+              type="text"
+              placeholder="Ej. Ingeniero de Software / Asistente"
+              value={datos.cargo || ''}
+              onChange={(e) => alCambiar({ cargo: e.target.value })}
+              className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2e5c] focus:border-transparent transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              DUI DEL TRABAJADOR (OPCIONAL)
+            </label>
+            <input
+              type="text"
+              placeholder="Ej. 12345678-9"
+              value={datos.dui || ''}
+              onChange={(e) => alCambiar({ dui: e.target.value })}
+              className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2e5c] focus:border-transparent transition-all"
+            />
+          </div>
+        </div>
+
+        {/* Selector de Sector Económico */}
+        <div>
+          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+            SECTOR ECONÓMICO (SALARIO MÍNIMO Y TOPE LEGAL)
+          </label>
+          <select
+            value={datos.sectorEconomico || 'comercio'}
+            onChange={(e) => alCambiar({ sectorEconomico: e.target.value as any })}
+            className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2e5c] transition-all"
+          >
+            <option value="comercio">Comercio y Servicios — Salario mín. $365.00 (Tope máx. 4 salarios: $1,460.00)</option>
+            <option value="maquila">Industria Textil y Confección (Maquila) — Salario mín. $359.16 (Tope: $1,436.64)</option>
+            <option value="agropecuario">Sector Agropecuario / Recolección — Salario mín. $272.72 (Tope: $1,090.88)</option>
+          </select>
+          <span className="text-[11px] text-slate-500 mt-1 block">
+            Ajusta automáticamente el tope de 4 salarios mínimos para la indemnización (Art. 58 CT).
+          </span>
         </div>
       </div>
 
@@ -183,7 +255,7 @@ export const LaborForm: React.FC<PropsFormularioLaboral> = ({
         </div>
 
         {/* Fechas de Inicio y Finalización */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-2">
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1 flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-slate-500" />
@@ -191,8 +263,10 @@ export const LaborForm: React.FC<PropsFormularioLaboral> = ({
             </label>
             <input
               type="date"
+              min="1970-01-01"
+              max="2099-12-31"
               value={datos.fechaInicio}
-              onChange={(e) => alCambiar({ fechaInicio: e.target.value })}
+              onChange={(e) => manejarCambioFechaInicio(e.target.value)}
               className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2e5c]"
             />
           </div>
@@ -204,12 +278,18 @@ export const LaborForm: React.FC<PropsFormularioLaboral> = ({
             </label>
             <input
               type="date"
+              min="1970-01-01"
+              max="2099-12-31"
               value={datos.fechaFin}
-              onChange={(e) => alCambiar({ fechaFin: e.target.value })}
+              onChange={(e) => manejarCambioFechaFin(e.target.value)}
               className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2e5c]"
             />
           </div>
         </div>
+
+        <p className="text-[11px] text-slate-500 mb-4">
+          Al elegir las fechas de inicio y fin, los años y meses laborados se calculan automáticamente. También puedes escribir la fecha directamente con el teclado (ej. 01/01/2020) o pulsar sobre el año en el calendario para retroceder rápidamente.
+        </p>
 
         {/* Período de Vacaciones Gozadas */}
         <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
@@ -222,6 +302,8 @@ export const LaborForm: React.FC<PropsFormularioLaboral> = ({
               <span className="text-[11px] text-slate-500 block mb-1">Inicio vacaciones</span>
               <input
                 type="date"
+                min="1970-01-01"
+                max="2099-12-31"
                 value={datos.fechaInicioVacaciones}
                 onChange={(e) => alCambiar({ fechaInicioVacaciones: e.target.value })}
                 className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#0a2e5c]"
@@ -231,6 +313,8 @@ export const LaborForm: React.FC<PropsFormularioLaboral> = ({
               <span className="text-[11px] text-slate-500 block mb-1">Fin vacaciones</span>
               <input
                 type="date"
+                min="1970-01-01"
+                max="2099-12-31"
                 value={datos.fechaFinVacaciones}
                 onChange={(e) => alCambiar({ fechaFinVacaciones: e.target.value })}
                 className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#0a2e5c]"
@@ -303,12 +387,28 @@ export const LaborForm: React.FC<PropsFormularioLaboral> = ({
 
         {/* Modal / Cuadro de Renuncia Voluntaria */}
         {datos.tipoTerminacion === 'renuncia_voluntaria' && (
-          <div className="mt-4 p-4 rounded-xl bg-amber-50/80 border border-amber-300">
-            <span className="text-xs font-bold text-amber-900 uppercase tracking-wider block mb-2">
+          <div className="mt-4 p-4 rounded-xl bg-amber-50/80 border border-amber-300 space-y-3">
+            <span className="text-xs font-bold text-amber-900 uppercase tracking-wider block">
               Validación de Preaviso Legal al Patrono
             </span>
-            <p className="text-xs text-amber-900 mb-3">
-              ¿Informó y notificó oportunamente al patrono con el preaviso legal de renuncia?
+
+            {/* Selector de Cargo: Empleado vs Jefatura */}
+            <div>
+              <label className="block text-[11px] font-bold text-amber-950 uppercase tracking-wide mb-1">
+                Tipo de Cargo / Nivel de Responsabilidad
+              </label>
+              <select
+                value={datos.tipoCargo || 'empleado'}
+                onChange={(e) => alCambiar({ tipoCargo: e.target.value as any })}
+                className="w-full bg-white border border-amber-300 rounded-lg px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
+              >
+                <option value="empleado">Empleado general / Operativo / Administrativo (Preaviso legal: 15 días)</option>
+                <option value="jefatura">Jefatura / Gerencia / Personal Especializado (Preaviso legal: 30 días)</option>
+              </select>
+            </div>
+
+            <p className="text-xs text-amber-900">
+              ¿Informó y notificó oportunamente al patrono con el preaviso legal de <strong>{datos.tipoCargo === 'jefatura' ? '30 días' : '15 días'}</strong> de anticipación?
             </p>
 
             <div className="flex gap-3">
@@ -321,7 +421,7 @@ export const LaborForm: React.FC<PropsFormularioLaboral> = ({
                     : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-50'
                 }`}
               >
-                Sí, se informó
+                Sí, se informó ({datos.tipoCargo === 'jefatura' ? '30d' : '15d'})
               </button>
 
               <button
@@ -338,10 +438,10 @@ export const LaborForm: React.FC<PropsFormularioLaboral> = ({
             </div>
 
             {datos.informoAlPatrono === false && (
-              <div className="mt-3 p-3 bg-red-100 border border-red-300 rounded-lg text-red-900 text-xs flex items-start gap-2">
+              <div className="p-3 bg-red-100 border border-red-300 rounded-lg text-red-900 text-xs flex items-start gap-2">
                 <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
                 <span>
-                  <strong>BLOQUEO LEGAL:</strong> Al no otorgar el preaviso correspondiente de ley, el sistema bloquea la compensación económica de renuncia (Monto = $0.00).
+                  <strong>BLOQUEO LEGAL:</strong> Al no otorgar el preaviso correspondiente de ley ({datos.tipoCargo === 'jefatura' ? '30 días' : '15 días'}), el sistema bloquea la compensación económica de renuncia (Monto = $0.00).
                 </span>
               </div>
             )}
@@ -588,6 +688,8 @@ export const LaborForm: React.FC<PropsFormularioLaboral> = ({
                 <label className="block text-xs font-bold text-slate-700 mb-1">Fecha de la Jornada</label>
                 <input
                   type="date"
+                  min="1970-01-01"
+                  max="2099-12-31"
                   value={fechaHE}
                   onChange={(e) => setFechaHE(e.target.value)}
                   className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-800"

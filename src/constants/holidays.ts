@@ -1,10 +1,16 @@
-import { DiaAsueto } from '../types';
+import { DiaAsueto, SectorEconomico } from '../types';
 
-export const SALARIO_MINIMO_COMERCIO = 365.00; // Salario mínimo sector comercio y servicios
+export const SALARIOS_MINIMOS_SECTOR = {
+  comercio: 365.00,      // Comercio y Servicios
+  maquila: 359.16,       // Industria textil y confección (maquila)
+  agropecuario: 272.72   // Sector agropecuario / recolección
+};
+
+export function obtenerSalarioMinimoSector(sector: SectorEconomico = 'comercio'): number {
+  return SALARIOS_MINIMOS_SECTOR[sector] || 365.00;
+}
+
 export const MULTIPLICADOR_TOPE_LEGAL = 4; // 4 salarios mínimos
-export const TOPE_MENSUAL_INDEMNIZACION = SALARIO_MINIMO_COMERCIO * MULTIPLICADOR_TOPE_LEGAL; // $1,460.00
-export const TOPE_DIARIO_INDEMNIZACION = TOPE_MENSUAL_INDEMNIZACION / 30; // $48.6667
-
 export const TASA_ISSS = 0.03; // 3%
 export const TOPE_MAXIMO_ISSS = 30.00; // Tope máximo ISSS $30.00 (salario $1,000+)
 export const TASA_AFP = 0.0725; // 7.25%
@@ -41,7 +47,7 @@ export const ARTICULOS_LEGALES = [
   {
     titulo: 'Indemnización por despido injustificado',
     articulos: ['Art. 58', 'Art. 59'],
-    texto: '30 días de salario básico por cada año de servicio. El salario diario utilizado no puede exceder 4 veces el salario mínimo del sector comercio ($365.00/mes). Fracciones de año son proporcionales.'
+    texto: '30 días de salario básico por cada año de servicio. El salario diario utilizado no puede exceder 4 veces el salario mínimo del sector. En ningún caso la indemnización será menor del equivalente al salario de 15 días. Fracciones de año son proporcionales.'
   },
   {
     titulo: 'Horas extraordinarias',

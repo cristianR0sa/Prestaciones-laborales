@@ -10,6 +10,8 @@ import { calcularPrestacionesLaborales } from './utils/calculator';
 const datosEmpleadoIniciales: DatosEmpleado = {
   nombreCompleto: '',
   empresa: '',
+  sectorEconomico: 'comercio',
+  tipoCargo: 'empleado',
   salarioMensual: 0,
   anosLaboradosInput: 0,
   mesesLaboradosInput: 0,

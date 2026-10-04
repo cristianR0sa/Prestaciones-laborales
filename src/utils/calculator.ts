@@ -4,8 +4,7 @@ import {
   RegistroHoraExtra 
 } from '../types';
 import { 
-  TOPE_MENSUAL_INDEMNIZACION, 
-  TOPE_DIARIO_INDEMNIZACION, 
+  obtenerSalarioMinimoSector,
   TASA_ISSS, 
   TOPE_MAXIMO_ISSS, 
   TASA_AFP,
@@ -108,6 +107,11 @@ export function calcularPrestacionesLaborales(datos: DatosEmpleado, haCalculado 
   const salarioDiario = salarioMensual > 0 ? salarioMensual / 30 : 0;
   const salarioPorHora = salarioDiario > 0 ? salarioDiario / 8 : 0;
 
+  const sector = datos.sectorEconomico || 'comercio';
+  const salarioMinimoSector = obtenerSalarioMinimoSector(sector);
+  const topeMensualIndemnizacion = salarioMinimoSector * 4;
+  const topeDiarioIndemnizacion = topeMensualIndemnizacion / 30;
+
   // 1. Antigüedad
   let anosTrabajados = Number(datos.anosLaboradosInput) || 0;
   let mesesTrabajados = Number(datos.mesesLaboradosInput) || 0;
@@ -125,23 +129,26 @@ export function calcularPrestacionesLaborales(datos: DatosEmpleado, haCalculado 
   // 2. Indemnización por Despido Injustificado / Compensación por Renuncia
   let baseIndemnizacion = salarioMensual;
   let aplicaTopeLegal = false;
+  let aplicaMinimoLegal15Dias = false;
   let salarioDiarioTopado = salarioDiario;
   let montoIndemnizacion = 0;
   let indemnizacionBloqueada = false;
   let motivoBloqueoIndemnizacion = '';
 
+  const diasPreavisoRequeridos = datos.tipoCargo === 'jefatura' ? 30 : 15;
+
   if (datos.tipoTerminacion === 'renuncia_voluntaria') {
     if (datos.informoAlPatrono === false) {
       indemnizacionBloqueada = true;
-      motivoBloqueoIndemnizacion = 'Por ley, al NO informar con preaviso al patrono, no aplica compensación económica por renuncia.';
+      motivoBloqueoIndemnizacion = `Por ley (Art. 302 CT y Ley Reguladora de la Prestación por Renuncia), al NO cumplir el preaviso legal de ${diasPreavisoRequeridos} días, no aplica compensación económica.`;
       montoIndemnizacion = 0;
     } else if (datos.informoAlPatrono === true) {
       if (anosTrabajados < 2) {
         indemnizacionBloqueada = true;
-        motivoBloqueoIndemnizacion = 'La ley exige al menos 2 años continuos para compensación por renuncia voluntaria.';
+        motivoBloqueoIndemnizacion = 'La ley exige al menos 2 años continuos de servicio para gozar de compensación por renuncia voluntaria.';
         montoIndemnizacion = 0;
       } else {
-        const maximoRenunciaMensual = 365.00 * 2;
+        const maximoRenunciaMensual = salarioMinimoSector * 2;
         const renunciaBaseDiaria = Math.min(salarioDiario, maximoRenunciaMensual / 30);
         const diasFraccion = (mesesTrabajados * 30) + diasTrabajados;
         const totalAnosEquivalentes = anosTrabajados + (diasFraccion / 365);
@@ -149,15 +156,15 @@ export function calcularPrestacionesLaborales(datos: DatosEmpleado, haCalculado 
       }
     } else {
       indemnizacionBloqueada = true;
-      motivoBloqueoIndemnizacion = 'Debe indicar si informó con preaviso al patrono.';
+      motivoBloqueoIndemnizacion = `Debe indicar si informó con el preaviso legal requerido (${diasPreavisoRequeridos} días).`;
       montoIndemnizacion = 0;
     }
   } else {
     // Despido Injustificado (Art. 58 Código de Trabajo)
-    if (salarioDiario > TOPE_DIARIO_INDEMNIZACION) {
+    if (salarioDiario > topeDiarioIndemnizacion) {
       aplicaTopeLegal = true;
-      salarioDiarioTopado = TOPE_DIARIO_INDEMNIZACION;
-      baseIndemnizacion = TOPE_MENSUAL_INDEMNIZACION;
+      salarioDiarioTopado = topeDiarioIndemnizacion;
+      baseIndemnizacion = topeMensualIndemnizacion;
     } else {
       salarioDiarioTopado = salarioDiario;
       baseIndemnizacion = salarioMensual;
@@ -165,7 +172,17 @@ export function calcularPrestacionesLaborales(datos: DatosEmpleado, haCalculado 
 
     const diasFraccion = (mesesTrabajados * 30) + diasTrabajados;
     const totalAnosEquivalentes = anosTrabajados + (diasFraccion / 365);
-    montoIndemnizacion = totalAnosEquivalentes * 30 * salarioDiarioTopado;
+    const indemnizacionCalculada = totalAnosEquivalentes * 30 * salarioDiarioTopado;
+
+    // Art. 58 CT: "En ningún caso la indemnización será menor del equivalente al salario de quince días."
+    const minimoLegal15Dias = salarioDiarioTopado * 15;
+    if ((anosTrabajados > 0 || mesesTrabajados > 0 || diasTrabajados > 0) && indemnizacionCalculada < minimoLegal15Dias) {
+      montoIndemnizacion = minimoLegal15Dias;
+      aplicaMinimoLegal15Dias = true;
+    } else {
+      montoIndemnizacion = indemnizacionCalculada;
+      aplicaMinimoLegal15Dias = false;
+    }
   }
 
   // 3. Aguinaldo (Art. 196-198 Código de Trabajo)
@@ -270,7 +287,11 @@ export function calcularPrestacionesLaborales(datos: DatosEmpleado, haCalculado 
   const diasDescansoTrabajados = Number(datos.diasDescansoLaborados) || 0;
   const montoDescansoTrabajado = diasDescansoTrabajados * (salarioDiario * 2.00);
 
-  // 7. Totales y Deducciones de Ley
+  // 7. Base Cotizable y Deducciones de Ley
+  // Nota legal: Indemnización y Aguinaldo están legalmente exentos de ISSS y AFP.
+  // La cotización aplica a vacaciones devengadas, asuetos laborados, horas extras y descansos.
+  const baseCotizableISSS_AFP = totalVacaciones + montoAsuetosLaborados + montoHorasExtras + montoDescansoTrabajado;
+
   const totalBruto = (indemnizacionBloqueada ? 0 : montoIndemnizacion) +
                      montoAguinaldo +
                      totalVacaciones +
@@ -278,8 +299,8 @@ export function calcularPrestacionesLaborales(datos: DatosEmpleado, haCalculado 
                      montoHorasExtras +
                      montoDescansoTrabajado;
 
-  const descuentoISSS = Math.min(totalBruto * TASA_ISSS, TOPE_MAXIMO_ISSS);
-  const descuentoAFP = totalBruto * TASA_AFP;
+  const descuentoISSS = Math.min(baseCotizableISSS_AFP * TASA_ISSS, TOPE_MAXIMO_ISSS);
+  const descuentoAFP = baseCotizableISSS_AFP * TASA_AFP;
   const totalDeducciones = descuentoISSS + descuentoAFP;
   const totalNeto = Math.max(0, totalBruto - totalDeducciones);
 
@@ -289,12 +310,14 @@ export function calcularPrestacionesLaborales(datos: DatosEmpleado, haCalculado 
     mesesTrabajados,
     diasTrabajados,
     totalDiasTrabajados,
+    salarioMinimoSector,
     salarioDiario,
     salarioPorHora,
     
     baseIndemnizacion,
     salarioDiarioTopado,
     aplicaTopeLegal,
+    aplicaMinimoLegal15Dias,
     montoIndemnizacion,
     indemnizacionBloqueada,
     motivoBloqueoIndemnizacion,
@@ -322,6 +345,7 @@ export function calcularPrestacionesLaborales(datos: DatosEmpleado, haCalculado 
     diasDescansoTrabajados,
     montoDescansoTrabajado,
     
+    baseCotizableISSS_AFP,
     totalBruto,
     descuentoISSS,
     descuentoAFP,

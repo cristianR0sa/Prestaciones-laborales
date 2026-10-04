@@ -63,9 +63,16 @@ export const LiquidationResults: React.FC<PropsResultadosLiquidacion> = ({
                     </span>
                     <span className="text-[11px] text-slate-500">
                       {datos.tipoTerminacion === 'despido_injustificado' 
-                        ? `Art. 58 CT (${resultados.anosTrabajados}a ${resultados.mesesTrabajados}m)` 
-                        : (datos.informoAlPatrono ? 'Ley de Renuncia' : 'Bloqueado por falta de preaviso')}
+                        ? (resultados.aplicaMinimoLegal15Dias 
+                            ? 'Mínimo legal 15 días (Art. 58 CT)' 
+                            : `Art. 58 CT (${resultados.anosTrabajados}a ${resultados.mesesTrabajados}m)`)
+                        : (datos.informoAlPatrono ? `Ley de Renuncia (${datos.tipoCargo === 'jefatura' ? '30d preaviso' : '15d preaviso'})` : 'Bloqueado por falta de preaviso')}
                     </span>
+                    {datos.tipoTerminacion === 'despido_injustificado' && resultados.aplicaTopeLegal && (
+                      <span className="text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded font-semibold block mt-0.5">
+                        Tope 4 salarios mínimos ({datos.sectorEconomico || 'comercio'})
+                      </span>
+                    )}
                   </div>
                   <span className={`font-mono font-bold text-sm ${resultados.indemnizacionBloqueada ? 'text-red-500' : 'text-slate-900'}`}>
                     {resultados.indemnizacionBloqueada ? '$0.00' : formatearMoneda(resultados.montoIndemnizacion)}
@@ -156,11 +163,19 @@ export const LiquidationResults: React.FC<PropsResultadosLiquidacion> = ({
               </div>
 
               {/* DEDUCCIONES DE LEY */}
-              <div className="p-3 rounded-lg bg-red-50/60 border border-red-200 space-y-1 text-xs">
-                <span className="text-[10px] font-bold text-red-900 uppercase block mb-1">
-                  DEDUCCIONES DE LEY
-                </span>
-                <div className="flex justify-between text-slate-600 text-[11px]">
+              <div className="p-3 rounded-lg bg-red-50/60 border border-red-200 space-y-1.5 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-red-900 uppercase">
+                    DEDUCCIONES DE LEY (ISSS / AFP)
+                  </span>
+                  <span className="text-[10px] text-slate-500">
+                    Base cotizable: <strong>{formatearMoneda(resultados.baseCotizableISSS_AFP)}</strong>
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400 italic">
+                  Indemnización y aguinaldo legalmente exentos de cotizaciones.
+                </p>
+                <div className="flex justify-between text-slate-600 text-[11px] pt-1">
                   <span>ISSS (3% - Tope $30.00):</span>
                   <span className="font-mono font-semibold text-red-700">-{formatearMoneda(resultados.descuentoISSS)}</span>
                 </div>

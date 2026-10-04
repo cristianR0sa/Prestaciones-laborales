@@ -1,4 +1,6 @@
 export type TipoTerminacion = 'despido_injustificado' | 'renuncia_voluntaria';
+export type SectorEconomico = 'comercio' | 'maquila' | 'agropecuario';
+export type TipoCargo = 'empleado' | 'jefatura';
 
 export interface DatosEmpleado {
   // 0. Datos de la Relación Laboral
@@ -6,6 +8,8 @@ export interface DatosEmpleado {
   empresa: string;
   dui?: string;
   cargo?: string;
+  sectorEconomico: SectorEconomico; // Comercio, Maquila, Agropecuario
+  tipoCargo: TipoCargo; // Empleado (15d preaviso) vs Jefatura (30d preaviso)
   
   // 1. Datos Financieros y Período
   salarioMensual: number; // Salario mensual
@@ -64,7 +68,8 @@ export interface ResultadoLiquidacion {
   diasTrabajados: number;
   totalDiasTrabajados: number;
   
-  // Salarios base
+  // Salarios base y sector
+  salarioMinimoSector: number;
   salarioDiario: number;
   salarioPorHora: number;
   
@@ -72,6 +77,7 @@ export interface ResultadoLiquidacion {
   baseIndemnizacion: number;
   salarioDiarioTopado: number;
   aplicaTopeLegal: boolean;
+  aplicaMinimoLegal15Dias: boolean;
   montoIndemnizacion: number;
   indemnizacionBloqueada: boolean;
   motivoBloqueoIndemnizacion?: string;
@@ -103,7 +109,8 @@ export interface ResultadoLiquidacion {
   diasDescansoTrabajados: number;
   montoDescansoTrabajado: number;
   
-  // 6. Totales y Deducciones
+  // 6. Base Cotizable y Deducciones
+  baseCotizableISSS_AFP: number;
   totalBruto: number; // TOTAL SIN AFP NI SEGURO SOCIAL
   descuentoISSS: number; // ISSS 3% (Tope $30)
   descuentoAFP: number; // AFP 7.25%
