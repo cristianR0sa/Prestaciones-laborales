@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Save, Trash2, CheckCircle2, Clock } from 'lucide-react';
+import { DatosEmpleado, ResultadoLiquidacion } from '../types';
+import { formatearMoneda } from '../utils/calculator';
 
-export const NotesTab: React.FC = () => {
+interface NotesTabProps {
+  datos: DatosEmpleado;
+  resultados: ResultadoLiquidacion;
+}
+
+const mostrarFecha = (fecha: string) => fecha ? fecha.split('-').reverse().join('/') : 'Sin especificar';
+
+export const NotesTab: React.FC<NotesTabProps> = ({ datos, resultados }) => {
   const [notes, setNotes] = useState<string>(() => {
-    return localStorage.getItem('labor_notes_draft') || 
-`# Bloc de Notas — Casos y Observaciones Laborales
-
-- Empleado: Juan Carlos Pérez
-- Caso: Liquidación por terminación contractual
-- Observaciones:
-  * Revisar comprobantes de preaviso si aplica renuncia.
-  * Verificar si gozó vacaciones del período correspondiente.
-  * Confirmar reporte de horas extras con jefe de departamento.
-`;
+    return localStorage.getItem('labor_notes_draft') || '';
   });
 
   const [savedStatus, setSavedStatus] = useState<boolean>(false);
@@ -29,6 +29,10 @@ export const NotesTab: React.FC = () => {
       localStorage.removeItem('labor_notes_draft');
     }
   };
+
+  const tipoTerminacion = datos.tipoTerminacion === 'despido_injustificado'
+    ? 'Despido injustificado'
+    : 'Renuncia voluntaria';
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 max-w-4xl mx-auto my-6">
@@ -67,11 +71,63 @@ export const NotesTab: React.FC = () => {
         </div>
       </div>
 
+      <section className="mb-6 rounded-xl border border-slate-200 bg-slate-50/80 p-4 sm:p-5" aria-label="Resumen actualizado del caso">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 mb-4">
+          <div>
+            <h3 className="text-sm font-bold text-slate-800">Resumen actual del caso</h3>
+            <p className="text-xs text-slate-500">Se actualiza automáticamente con los datos del formulario.</p>
+          </div>
+          <span className="text-xs font-semibold text-sky-800">{tipoTerminacion}</span>
+        </div>
+
+        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-xs">
+          <div>
+            <dt className="text-slate-500">Trabajador</dt>
+            <dd className="font-semibold text-slate-800">{datos.nombreCompleto || 'Sin especificar'}</dd>
+          </div>
+          <div>
+            <dt className="text-slate-500">Empresa</dt>
+            <dd className="font-semibold text-slate-800">{datos.empresa || 'Sin especificar'}</dd>
+          </div>
+          <div>
+            <dt className="text-slate-500">Salario mensual</dt>
+            <dd className="font-semibold text-slate-800">{formatearMoneda(datos.salarioMensual)}</dd>
+          </div>
+          <div>
+            <dt className="text-slate-500">Período laborado</dt>
+            <dd className="font-semibold text-slate-800">
+              {mostrarFecha(datos.fechaInicio)} a {mostrarFecha(datos.fechaFin)}
+              {' '}({resultados.anosTrabajados} años, {resultados.mesesTrabajados} meses y {resultados.diasTrabajados} días)
+            </dd>
+          </div>
+          <div>
+            <dt className="text-slate-500">Indemnización</dt>
+            <dd className="font-semibold text-slate-800">{formatearMoneda(resultados.montoIndemnizacion)}</dd>
+          </div>
+          <div>
+            <dt className="text-slate-500">Aguinaldo</dt>
+            <dd className="font-semibold text-slate-800">{formatearMoneda(resultados.montoAguinaldo)}</dd>
+          </div>
+          <div>
+            <dt className="text-slate-500">Vacaciones</dt>
+            <dd className="font-semibold text-slate-800">{formatearMoneda(resultados.totalVacaciones)}</dd>
+          </div>
+          <div>
+            <dt className="text-slate-500">Horas extras</dt>
+            <dd className="font-semibold text-slate-800">{formatearMoneda(resultados.montoHorasExtras)}</dd>
+          </div>
+          <div className="sm:col-span-2 pt-3 border-t border-slate-200 flex justify-between gap-4">
+            <dt className="font-bold text-slate-700">Monto neto estimado</dt>
+            <dd className="font-bold text-slate-900">{formatearMoneda(resultados.totalNeto)}</dd>
+          </div>
+        </dl>
+      </section>
+
       <textarea
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
         rows={16}
-        placeholder="Escriba aquí sus notas, observaciones del caso o bitácora de cálculo..."
+        placeholder="Añada observaciones para este caso..."
         className="w-full bg-slate-50 border border-slate-300 rounded-xl p-4 text-sm font-mono text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2e5c] transition-all resize-y"
       />
 

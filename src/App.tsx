@@ -81,7 +81,7 @@ export function App() {
             <LegalBaseSection />
           </div>
         ) : (
-          <NotesTab />
+          <NotesTab datos={datos} resultados={resultados} />
         )}
       </main>
 

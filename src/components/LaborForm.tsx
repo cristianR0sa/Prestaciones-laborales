@@ -194,9 +194,11 @@ export const LaborForm: React.FC<PropsFormularioLaboral> = ({
             </label>
             <input
               type="text"
-              placeholder="Ej. 12345678-9"
+              inputMode="numeric"
+              maxLength={9}
+              placeholder="Ej. 123456789"
               value={datos.dui || ''}
-              onChange={(e) => alCambiar({ dui: e.target.value })}
+              onChange={(e) => alCambiar({ dui: e.target.value.replace(/\D/g, '').slice(0, 9) })}
               className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2e5c] focus:border-transparent transition-all"
             />
           </div>
