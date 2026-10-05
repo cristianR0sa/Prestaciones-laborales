@@ -4,14 +4,14 @@ import { formatearMoneda } from './calculator';
 
 /**
  * Convierte un número a letras en español para moneda (Dólares).
- * Ejemplo: 36980.84 -> "TREINTA Y SEIS MIL NOVECIENTOS OCHENTA 84/100 DOLARES DE LOS ESTADOS UNIDOS DE AMERICA"
+ * Ejemplo: 36980.84 -> "TREINTA Y SEIS MIL NOVECIENTOS OCHENTA 84/100 DÓLARES DE LOS ESTADOS UNIDOS DE AMÉRICA"
  */
 function numeroALetras(monto: number): string {
-  if (isNaN(monto) || monto < 0) return 'CERO 00/100 DOLARES DE LOS ESTADOS UNIDOS DE AMERICA';
+  if (isNaN(monto) || monto < 0) return 'CERO 00/100 DÓLARES DE LOS ESTADOS UNIDOS DE AMÉRICA';
 
   const parteEntera = Math.floor(monto);
   const centavos = Math.round((monto - parteEntera) * 100);
-  const centavosTexto = centavos.toString().padStart(2, '0') + '/100 DOLARES DE LOS ESTADOS UNIDOS DE AMERICA';
+  const centavosTexto = centavos.toString().padStart(2, '0') + '/100 DÓLARES DE LOS ESTADOS UNIDOS DE AMÉRICA';
 
   if (parteEntera === 0) {
     return `CERO ${centavosTexto}`;
@@ -23,10 +23,10 @@ function numeroALetras(monto: number): string {
       '', 'DIEZ', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA'
     ];
     const especiales10 = [
-      'DIEZ', 'ONCE', 'DOCE', 'TRECE', 'CATORCE', 'QUINCE', 'DIECISEIS', 'DIECISIETE', 'DIECIOCHO', 'DIECINUEVE'
+      'DIEZ', 'ONCE', 'DOCE', 'TRECE', 'CATORCE', 'QUINCE', 'DIECISÉIS', 'DIECISIETE', 'DIECIOCHO', 'DIECINUEVE'
     ];
     const especiales20 = [
-      'VEINTE', 'VEINTIUNO', 'VEINTIDOS', 'VEINTITRES', 'VEINTICUATRO', 'VEINTICINCO', 'VEINTISEIS', 'VEINTISIETE', 'VEINTIOCHO', 'VEINTINUEVE'
+      'VEINTE', 'VEINTIUNO', 'VEINTIDÓS', 'VEINTITRÉS', 'VEINTICUATRO', 'VEINTICINCO', 'VEINTISÉIS', 'VEINTISIETE', 'VEINTIOCHO', 'VEINTINUEVE'
     ];
     const centenas = [
       '', 'CIENTO', 'DOSCIENTOS', 'TRESCIENTOS', 'CUATROCIENTOS', 'QUINIENTOS', 'SEISCIENTOS', 'SETECIENTOS', 'OCHOCIENTOS', 'NOVECIENTOS'
@@ -72,7 +72,7 @@ function numeroALetras(monto: number): string {
 
   if (millones > 0) {
     if (millones === 1) {
-      texto += 'UN MILLON ';
+      texto += 'UN MILLÓN ';
     } else {
       texto += convertirGrupo(millones) + ' MILLONES ';
     }
@@ -171,13 +171,13 @@ export function generarLiquidacionPDF(datos: DatosEmpleado, resultados: Resultad
   doc.setTextColor(10, 46, 92); // Azul Marino #0a2e5c
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11.5);
-  doc.text('COMPROBANTE DE LIQUIDACION DE PRESTACIONES LABORALES', anchoPagina / 2, y, { align: 'center' });
+  doc.text('COMPROBANTE DE LIQUIDACIÓN DE PRESTACIONES LABORALES', anchoPagina / 2, y, { align: 'center' });
 
   y += 5;
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
   doc.setTextColor(2, 132, 199); // Celeste #0284c7
-  doc.text('Republica de El Salvador', anchoPagina / 2, y, { align: 'center' });
+  doc.text('República de El Salvador', anchoPagina / 2, y, { align: 'center' });
 
   y += 5;
   // Línea divisoria superior en azul marino / celeste
@@ -223,7 +223,7 @@ export function generarLiquidacionPDF(datos: DatosEmpleado, resultados: Resultad
   // Fila 2: Cargo & Salario
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 116, 139);
-  doc.text('Cargo desempenado', colIzqLabel, y);
+  doc.text('Cargo desempeñado', colIzqLabel, y);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(15, 23, 42);
   doc.text(datos.cargo || 'Personal de Operaciones', colIzqVal, y);
@@ -247,7 +247,7 @@ export function generarLiquidacionPDF(datos: DatosEmpleado, resultados: Resultad
 
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 116, 139);
-  doc.text('Fecha de terminacion', colDerLabel, y);
+  doc.text('Fecha de terminación', colDerLabel, y);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(15, 23, 42);
   doc.text(formatearFechaTexto(datos.fechaFin), colDerVal, y);
@@ -257,7 +257,7 @@ export function generarLiquidacionPDF(datos: DatosEmpleado, resultados: Resultad
   // Fila 4: Antigüedad & Causa
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 116, 139);
-  doc.text('Antiguedad reconocida', colIzqLabel, y);
+  doc.text('Antigüedad reconocida', colIzqLabel, y);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(10, 46, 92);
   const textoAnos = resultados.anosTrabajados === 1 ? '1 año' : `${resultados.anosTrabajados} años`;
@@ -266,7 +266,7 @@ export function generarLiquidacionPDF(datos: DatosEmpleado, resultados: Resultad
 
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 116, 139);
-  doc.text('Causa de terminacion', colDerLabel, y);
+  doc.text('Causa de terminación', colDerLabel, y);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(15, 23, 42);
   doc.text(textoCausa, colDerVal, y);
@@ -276,7 +276,7 @@ export function generarLiquidacionPDF(datos: DatosEmpleado, resultados: Resultad
   // Fila 5: Sector Económico & DUI
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 116, 139);
-  doc.text('Sector economico', colIzqLabel, y);
+  doc.text('Sector económico', colIzqLabel, y);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(15, 23, 42);
   const nombresSector: Record<string, string> = {
@@ -284,7 +284,7 @@ export function generarLiquidacionPDF(datos: DatosEmpleado, resultados: Resultad
     industria: 'Industria ($408.80)',
     maquila: 'Maquila Textil ($402.32)',
     agricultura: 'Agricultura Cosecha ($305.23)',
-    agropecuario: 'Agropecuario y Cafe ($272.53)'
+    agropecuario: 'Agropecuario y Café ($272.53)'
   };
   doc.text(nombresSector[datos.sectorEconomico || 'comercio'] || 'Comercio ($408.80)', colIzqVal, y);
 
@@ -351,12 +351,12 @@ export function generarLiquidacionPDF(datos: DatosEmpleado, resultados: Resultad
   };
 
   // Filas de conceptos
-  imprimirFilaPrestacion('Vacacion proporcional', 'Arts. 177 y 187 CT', resultados.totalVacaciones);
+  imprimirFilaPrestacion('Vacación proporcional', 'Arts. 177 y 187 CT', resultados.totalVacaciones);
   imprimirFilaPrestacion('Aguinaldo proporcional', 'Arts. 196-198 CT', resultados.montoAguinaldo);
   
   const etiquetaIndemnizacion = datos.tipoTerminacion === 'despido_injustificado'
-    ? 'Indemnizacion por despido injustificado'
-    : 'Compensacion por renuncia voluntaria';
+    ? 'Indemnización por despido injustificado'
+    : 'Compensación por renuncia voluntaria';
   imprimirFilaPrestacion(
     etiquetaIndemnizacion, 
     datos.tipoTerminacion === 'despido_injustificado' ? 'Art. 58 CT' : 'Ley de Renuncia Voluntaria', 
@@ -366,8 +366,8 @@ export function generarLiquidacionPDF(datos: DatosEmpleado, resultados: Resultad
 
   imprimirFilaPrestacion('Horas extras diurnas', 'Art. 169 CT', resultados.horasExtrasDiurnas * ((datos.salarioMensual / 30 / 8) * 2));
   imprimirFilaPrestacion('Horas extras nocturnas', 'Arts. 168 y 169 CT', resultados.horasExtrasNocturnas * ((datos.salarioMensual / 30 / 8) * 2.5));
-  imprimirFilaPrestacion('Dias de asueto laborados', 'Art. 192 CT', resultados.montoAsuetosLaborados);
-  imprimirFilaPrestacion('Dias de descanso semanal laborados', 'Arts. 175 y 176 CT', resultados.montoDescansoTrabajado);
+  imprimirFilaPrestacion('Días de asueto laborados', 'Art. 192 CT', resultados.montoAsuetosLaborados);
+  imprimirFilaPrestacion('Días de descanso semanal laborados', 'Arts. 175 y 176 CT', resultados.montoDescansoTrabajado);
 
   // Total Devengado Bruto con líneas azul marino
   y += 1;
@@ -399,7 +399,7 @@ export function generarLiquidacionPDF(datos: DatosEmpleado, resultados: Resultad
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
   doc.setTextColor(100, 116, 139);
-  doc.text(`Remuneracion gravada: ${formatearMoneda(remuneracionGravada)}. Monto exento de ISR y de cotizaciones: ${formatearMoneda(montoExento)} (indemnizacion y aguinaldo).`, margen, y);
+  doc.text(`Remuneración gravada: ${formatearMoneda(remuneracionGravada)}. Monto exento de ISR y de cotizaciones: ${formatearMoneda(montoExento)} (indemnización y aguinaldo).`, margen, y);
 
   y += 4;
 
@@ -425,9 +425,9 @@ export function generarLiquidacionPDF(datos: DatosEmpleado, resultados: Resultad
     y += altoFila;
   };
 
-  imprimirFilaDeduccion('Cotizacion ISSS (trabajador)', 'Reglamento del ISSS, Art. 29', resultados.descuentoISSS);
-  imprimirFilaDeduccion('Cotizacion AFP (trabajador)', 'Ley del Sistema de Ahorro para Pensiones', resultados.descuentoAFP);
-  imprimirFilaDeduccion('Retencion de ISR', 'Art. 37 Ley de ISR', retencionISR);
+  imprimirFilaDeduccion('Cotización ISSS (trabajador)', 'Reglamento del ISSS, Art. 29', resultados.descuentoISSS);
+  imprimirFilaDeduccion('Cotización AFP (trabajador)', 'Ley del Sistema de Ahorro para Pensiones', resultados.descuentoAFP);
+  imprimirFilaDeduccion('Retención de ISR', 'Art. 37 Ley de ISR', retencionISR);
 
   // Total deducciones
   y += 1;
@@ -501,13 +501,13 @@ export function generarLiquidacionPDF(datos: DatosEmpleado, resultados: Resultad
   doc.setTextColor(10, 46, 92); // Azul marino
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11.5);
-  doc.text('COMPROBANTE DE LIQUIDACION DE PRESTACIONES LABORALES', anchoPagina / 2, y, { align: 'center' });
+  doc.text('COMPROBANTE DE LIQUIDACIÓN DE PRESTACIONES LABORALES', anchoPagina / 2, y, { align: 'center' });
 
   y += 5;
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
   doc.setTextColor(2, 132, 199); // Celeste
-  doc.text('Republica de El Salvador', anchoPagina / 2, y, { align: 'center' });
+  doc.text('República de El Salvador', anchoPagina / 2, y, { align: 'center' });
 
   y += 5;
   doc.setDrawColor(2, 132, 199); // Celeste
@@ -520,7 +520,7 @@ export function generarLiquidacionPDF(datos: DatosEmpleado, resultados: Resultad
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9.5);
   doc.setTextColor(10, 46, 92); // Azul marino
-  doc.text('IV. Declaracion', margen, y);
+  doc.text('IV. Declaración', margen, y);
 
   y += 5;
   doc.setFont('helvetica', 'normal');
@@ -528,8 +528,8 @@ export function generarLiquidacionPDF(datos: DatosEmpleado, resultados: Resultad
   doc.setTextColor(30, 41, 59);
   
   const textoDeclaracion = 
-    `La persona trabajadora ${nombreTrabajador} declara haber recibido el detalle de las prestaciones economicas ` +
-    `que anteceden, calculadas conforme al Codigo de Trabajo de El Salvador, asi como el desglose de las retenciones de ley aplicadas ` +
+    `La persona trabajadora ${nombreTrabajador} declara haber recibido el detalle de las prestaciones económicas ` +
+    `que anteceden, calculadas conforme al Código de Trabajo de El Salvador, así como el desglose de las retenciones de ley aplicadas ` +
     `y el monto neto resultante. Este comprobante se suscribe en la fecha que se indica al pie de las firmas.`;
   
   const lineasDeclaracion = doc.splitTextToSize(textoDeclaracion, anchoContenido);
@@ -593,11 +593,11 @@ export function generarLiquidacionPDF(datos: DatosEmpleado, resultados: Resultad
   doc.setTextColor(69, 26, 3); // #451a03
 
   const textoAdvertencia = 
-    `Este documento es un comprobante informativo del calculo de prestaciones y NO constituye el finiquito laboral. Conforme al Art. 402 inciso ` +
-    `2 del Codigo de Trabajo, la renuncia, la terminacion por mutuo consentimiento o el recibo de pago de prestaciones por despido sin causa ` +
-    `legal solo tienen valor probatorio si constan en hojas extendidas por la Direccion General de Inspeccion de Trabajo o por los jueces con ` +
-    `competencia en materia laboral, utilizadas dentro de los diez dias siguientes a su expedicion, o bien en documento privado autenticado ` +
-    `ante notario. Se recomienda asesoria legal profesional antes de suscribir cualquier finiquito.`;
+    `Este documento es un comprobante informativo del cálculo de prestaciones y NO constituye el finiquito laboral. Conforme al Art. 402 inciso ` +
+    `2 del Código de Trabajo, la renuncia, la terminación por mutuo consentimiento o el recibo de pago de prestaciones por despido sin causa ` +
+    `legal solo tienen valor probatorio si constan en hojas extendidas por la Dirección General de Inspección de Trabajo o por los jueces con ` +
+    `competencia en materia laboral, utilizadas dentro de los diez días siguientes a su expedición, o bien en documento privado autenticado ` +
+    `ante notario. Se recomienda asesoría legal profesional antes de suscribir cualquier finiquito.`;
 
   const lineasAdvertencia = doc.splitTextToSize(textoAdvertencia, anchoContenido - 8);
   doc.text(lineasAdvertencia, margen + 4, y + 11.5);
@@ -612,5 +612,5 @@ export function generarLiquidacionPDF(datos: DatosEmpleado, resultados: Resultad
   // Guardar archivo PDF
   const nombreLimpio = (datos.nombreCompleto || 'Liquidacion').replace(/\s+/g, '_');
   const fechaArchivo = ahora.toISOString().slice(0, 10);
-  doc.save(`Comprobante_Liquidacion_${nombreLimpio}_${fechaArchivo}.pdf`);
+  doc.save(`Comprobante_Liquidación_${nombreLimpio}_${fechaArchivo}.pdf`);
 }
