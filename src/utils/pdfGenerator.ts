@@ -260,7 +260,9 @@ export function generarLiquidacionPDF(datos: DatosEmpleado, resultados: Resultad
   doc.text('Antiguedad reconocida', colIzqLabel, y);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(10, 46, 92);
-  doc.text(`${resultados.anosTrabajados} anios, ${resultados.mesesTrabajados} meses`, colIzqVal, y);
+  const textoAnos = resultados.anosTrabajados === 1 ? '1 año' : `${resultados.anosTrabajados} años`;
+  const textoMeses = resultados.mesesTrabajados === 1 ? '1 mes' : `${resultados.mesesTrabajados} meses`;
+  doc.text(`${textoAnos}, ${textoMeses}`, colIzqVal, y);
 
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 116, 139);
