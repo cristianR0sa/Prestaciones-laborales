@@ -1,13 +1,15 @@
 import { DiaAsueto, SectorEconomico } from '../types';
 
 export const SALARIOS_MINIMOS_SECTOR = {
-  comercio: 365.00,      // Comercio y Servicios
-  maquila: 359.16,       // Industria textil y confección (maquila)
-  agropecuario: 272.72   // Sector agropecuario / recolección
+  comercio: 408.80,      // Comercio y Servicios ($408.80)
+  industria: 408.80,     // Industria ($408.80)
+  maquila: 402.32,       // Maquila textil y confección ($402.32)
+  agricultura: 305.23,   // Agricultura (recolección de cosecha) ($305.23)
+  agropecuario: 272.53   // Agropecuario, pesca, otras actividades y café ($272.53)
 };
 
 export function obtenerSalarioMinimoSector(sector: SectorEconomico = 'comercio'): number {
-  return SALARIOS_MINIMOS_SECTOR[sector] || 365.00;
+  return SALARIOS_MINIMOS_SECTOR[sector] || 408.80;
 }
 
 export const MULTIPLICADOR_TOPE_LEGAL = 4; // 4 salarios mínimos

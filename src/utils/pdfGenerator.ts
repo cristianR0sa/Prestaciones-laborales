@@ -269,7 +269,33 @@ export function generarLiquidacionPDF(datos: DatosEmpleado, resultados: Resultad
   doc.setTextColor(15, 23, 42);
   doc.text(textoCausa, colDerVal, y);
 
-  y += 10;
+  y += interlineadoDatos;
+
+  // Fila 5: Sector Económico & DUI
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 116, 139);
+  doc.text('Sector economico', colIzqLabel, y);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(15, 23, 42);
+  const nombresSector: Record<string, string> = {
+    comercio: 'Comercio y Servicios ($408.80)',
+    industria: 'Industria ($408.80)',
+    maquila: 'Maquila Textil ($402.32)',
+    agricultura: 'Agricultura Cosecha ($305.23)',
+    agropecuario: 'Agropecuario y Cafe ($272.53)'
+  };
+  doc.text(nombresSector[datos.sectorEconomico || 'comercio'] || 'Comercio ($408.80)', colIzqVal, y);
+
+  if (datos.dui) {
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text('DUI trabajador', colDerLabel, y);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text(datos.dui, colDerVal, y);
+  }
+
+  y += 9;
 
   // II. Desglose de prestaciones liquidadas
   doc.setFont('helvetica', 'bold');

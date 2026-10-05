@@ -178,12 +178,14 @@ export const LaborForm: React.FC<PropsFormularioLaboral> = ({
             onChange={(e) => alCambiar({ sectorEconomico: e.target.value as any })}
             className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2e5c] transition-all"
           >
-            <option value="comercio">Comercio y Servicios — Salario mín. $365.00 (Tope máx. 4 salarios: $1,460.00)</option>
-            <option value="maquila">Industria Textil y Confección (Maquila) — Salario mín. $359.16 (Tope: $1,436.64)</option>
-            <option value="agropecuario">Sector Agropecuario / Recolección — Salario mín. $272.72 (Tope: $1,090.88)</option>
+            <option value="comercio">Comercio y Servicios — Salario mín. $408.80 (Tope máx. 4 salarios: $1,635.20)</option>
+            <option value="industria">Industria — Salario mín. $408.80 (Tope máx. 4 salarios: $1,635.20)</option>
+            <option value="maquila">Maquila Textil y Confección — Salario mín. $402.32 (Tope: $1,609.28)</option>
+            <option value="agricultura">Agricultura (Recolección de cosecha) — Salario mín. $305.23 (Tope: $1,220.92)</option>
+            <option value="agropecuario">Agropecuario, pesca, otras activ. y café — Salario mín. $272.53 (Tope: $1,090.12)</option>
           </select>
           <span className="text-[11px] text-slate-500 mt-1 block">
-            Ajusta automáticamente el tope de 4 salarios mínimos para la indemnización (Art. 58 CT).
+            Ajusta automáticamente el tope de 4 salarios mínimos vigentes 2026 para la indemnización (Art. 58 CT).
           </span>
         </div>
       </div>

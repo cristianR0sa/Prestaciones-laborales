@@ -1,5 +1,5 @@
 export type TipoTerminacion = 'despido_injustificado' | 'renuncia_voluntaria';
-export type SectorEconomico = 'comercio' | 'maquila' | 'agropecuario';
+export type SectorEconomico = 'comercio' | 'industria' | 'maquila' | 'agricultura' | 'agropecuario';
 export type TipoCargo = 'empleado' | 'jefatura';
 
 export interface DatosEmpleado {
@@ -8,7 +8,7 @@ export interface DatosEmpleado {
   empresa: string;
   dui?: string;
   cargo?: string;
-  sectorEconomico: SectorEconomico; // Comercio, Maquila, Agropecuario
+  sectorEconomico: SectorEconomico; // Comercio, Industria, Maquila, Agricultura, Agropecuario
   tipoCargo: TipoCargo; // Empleado (15d preaviso) vs Jefatura (30d preaviso)
   
   // 1. Datos Financieros y Período
