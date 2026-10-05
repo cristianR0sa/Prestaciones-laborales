@@ -18,6 +18,34 @@ interface PropsFormularioLaboral {
   alLimpiar: () => void;
 }
 
+const calcularFechaMaximaVacaciones = (fechaInicio: string): string => {
+  const [ano, mes, dia] = fechaInicio.split('-').map(Number);
+  const fecha = new Date(ano, mes - 1, dia);
+  let diasContados = 0;
+
+  while (diasContados < 15) {
+    if (fecha.getDay() !== 0) diasContados++;
+    if (diasContados < 15) fecha.setDate(fecha.getDate() + 1);
+  }
+
+  return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`;
+};
+
+const contarDiasVacaciones = (fechaInicio: string, fechaFin: string): number => {
+  const [anoInicio, mesInicio, diaInicio] = fechaInicio.split('-').map(Number);
+  const [anoFin, mesFin, diaFin] = fechaFin.split('-').map(Number);
+  const fecha = new Date(anoInicio, mesInicio - 1, diaInicio);
+  const ultimaFecha = new Date(anoFin, mesFin - 1, diaFin);
+  let diasContados = 0;
+
+  while (fecha <= ultimaFecha) {
+    if (fecha.getDay() !== 0) diasContados++;
+    fecha.setDate(fecha.getDate() + 1);
+  }
+
+  return diasContados;
+};
+
 export const LaborForm: React.FC<PropsFormularioLaboral> = ({
   datos,
   resultados,
@@ -25,6 +53,12 @@ export const LaborForm: React.FC<PropsFormularioLaboral> = ({
   alCalcular,
   alLimpiar
 }) => {
+  const hoy = new Date();
+  const fechaHoy = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
+  const fechaMaximaVacaciones = datos.fechaInicioVacaciones
+    ? [calcularFechaMaximaVacaciones(datos.fechaInicioVacaciones), fechaHoy].sort()[0]
+    : fechaHoy;
+
   // Manejadores sincronizados de fechas
   const manejarCambioFechaInicio = (nuevaFechaInicio: string) => {
     if (nuevaFechaInicio && datos.fechaFin) {
@@ -35,7 +69,7 @@ export const LaborForm: React.FC<PropsFormularioLaboral> = ({
         mesesLaboradosInput: antiguedad.meses
       });
     } else {
-      alCambiar({ fechaInicio: nuevaFechaInicio });
+      alCambiar({ fechaInicio: nuevaFechaInicio, anosLaboradosInput: 0, mesesLaboradosInput: 0 });
     }
   };
 
@@ -48,7 +82,7 @@ export const LaborForm: React.FC<PropsFormularioLaboral> = ({
         mesesLaboradosInput: antiguedad.meses
       });
     } else {
-      alCambiar({ fechaFin: nuevaFechaFin });
+      alCambiar({ fechaFin: nuevaFechaFin, anosLaboradosInput: 0, mesesLaboradosInput: 0 });
     }
   };
 
@@ -104,12 +138,12 @@ export const LaborForm: React.FC<PropsFormularioLaboral> = ({
     <div className="space-y-6">
       
       {/* 0. DATOS DE LA RELACIÓN LABORAL */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 sm:p-6">
+      <div className="bg-white/85 rounded-2xl border border-slate-200/80 shadow-[0_18px_35px_rgba(15,23,42,0.04)] p-5 sm:p-6 backdrop-blur-sm">
         <div className="flex items-center gap-3 pb-3 mb-4 border-b border-slate-100">
-          <span className="w-6 h-6 rounded-full bg-[#0a2e5c] text-white flex items-center justify-center font-bold text-xs">
+          <span className="w-7 h-7 rounded-full bg-gradient-to-br from-slate-900 to-sky-900 text-white flex items-center justify-center font-bold text-xs shadow-sm">
             0
           </span>
-          <h2 className="text-sm font-extrabold uppercase tracking-wide text-[#0a2e5c]">
+          <h2 className="text-sm font-extrabold uppercase tracking-[0.14em] text-slate-800">
             DATOS DE LA RELACIÓN LABORAL
           </h2>
         </div>
@@ -176,7 +210,7 @@ export const LaborForm: React.FC<PropsFormularioLaboral> = ({
           <select
             value={datos.sectorEconomico || 'comercio'}
             onChange={(e) => alCambiar({ sectorEconomico: e.target.value as any })}
-            className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2e5c] transition-all"
+            className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-300 transition-all"
           >
             <option value="comercio">Comercio y Servicios — Salario mín. $408.80 (Tope máx. 4 salarios: $1,635.20)</option>
             <option value="industria">Industria — Salario mín. $408.80 (Tope máx. 4 salarios: $1,635.20)</option>
@@ -191,12 +225,12 @@ export const LaborForm: React.FC<PropsFormularioLaboral> = ({
       </div>
 
       {/* 1. DATOS FINANCIEROS Y PERÍODO */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 sm:p-6">
+      <div className="bg-white/85 rounded-2xl border border-slate-200/80 shadow-[0_18px_35px_rgba(15,23,42,0.04)] p-5 sm:p-6 backdrop-blur-sm">
         <div className="flex items-center gap-3 pb-3 mb-4 border-b border-slate-100">
-          <span className="w-6 h-6 rounded-full bg-[#0a2e5c] text-white flex items-center justify-center font-bold text-xs">
+          <span className="w-7 h-7 rounded-full bg-gradient-to-br from-slate-900 to-sky-900 text-white flex items-center justify-center font-bold text-xs shadow-sm">
             1
           </span>
-          <h2 className="text-sm font-extrabold uppercase tracking-wide text-[#0a2e5c]">
+          <h2 className="text-sm font-extrabold uppercase tracking-[0.14em] text-slate-800">
             DATOS FINANCIEROS Y PERÍODO
           </h2>
         </div>
@@ -223,39 +257,6 @@ export const LaborForm: React.FC<PropsFormularioLaboral> = ({
           </div>
         </div>
 
-        {/* Años y Meses Laborados */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-              AÑOS LABORADOS <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="number"
-              min="0"
-              placeholder="0"
-              value={datos.anosLaboradosInput ? datos.anosLaboradosInput : ''}
-              onChange={(e) => alCambiar({ anosLaboradosInput: e.target.value === '' ? 0 : parseInt(e.target.value) || 0 })}
-              className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2e5c] transition-all placeholder:text-slate-400 placeholder:font-normal"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-              MESES LABORADOS <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="number"
-              min="0"
-              max="11"
-              placeholder="0"
-              value={datos.mesesLaboradosInput ? datos.mesesLaboradosInput : ''}
-              onChange={(e) => alCambiar({ mesesLaboradosInput: e.target.value === '' ? 0 : parseInt(e.target.value) || 0 })}
-              className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2e5c] transition-all placeholder:text-slate-400 placeholder:font-normal"
-            />
-            <span className="text-[11px] text-slate-400 mt-1 block">Entre 0 y 11</span>
-          </div>
-        </div>
-
         {/* Fechas de Inicio y Finalización */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-2">
           <div>
@@ -266,9 +267,11 @@ export const LaborForm: React.FC<PropsFormularioLaboral> = ({
             <input
               type="date"
               min="1970-01-01"
-              max="2099-12-31"
+              max={fechaHoy}
               value={datos.fechaInicio}
-              onChange={(e) => manejarCambioFechaInicio(e.target.value)}
+              onChange={(e) => {
+                if (e.target.value <= fechaHoy) manejarCambioFechaInicio(e.target.value);
+              }}
               className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2e5c]"
             />
           </div>
@@ -281,9 +284,11 @@ export const LaborForm: React.FC<PropsFormularioLaboral> = ({
             <input
               type="date"
               min="1970-01-01"
-              max="2099-12-31"
+              max={fechaHoy}
               value={datos.fechaFin}
-              onChange={(e) => manejarCambioFechaFin(e.target.value)}
+              onChange={(e) => {
+                if (e.target.value <= fechaHoy) manejarCambioFechaFin(e.target.value);
+              }}
               className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2e5c]"
             />
           </div>
@@ -292,6 +297,37 @@ export const LaborForm: React.FC<PropsFormularioLaboral> = ({
         <p className="text-[11px] text-slate-500 mb-4">
           Al elegir las fechas de inicio y fin, los años y meses laborados se calculan automáticamente. También puedes escribir la fecha directamente con el teclado (ej. 01/01/2020) o pulsar sobre el año en el calendario para retroceder rápidamente.
         </p>
+
+        {/* Años y Meses Laborados */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              AÑOS LABORADOS
+            </label>
+            <input
+              type="number"
+              value={datos.anosLaboradosInput ? datos.anosLaboradosInput : ''}
+              readOnly
+              aria-readonly="true"
+              placeholder="Se calcula con las fechas"
+              className="w-full bg-slate-100 border border-slate-200 rounded-lg px-3.5 py-2.5 text-sm text-slate-700 font-semibold cursor-not-allowed"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              MESES LABORADOS
+            </label>
+            <input
+              type="number"
+              value={datos.mesesLaboradosInput ? datos.mesesLaboradosInput : ''}
+              readOnly
+              aria-readonly="true"
+              placeholder="Se calcula con las fechas"
+              className="w-full bg-slate-100 border border-slate-200 rounded-lg px-3.5 py-2.5 text-sm text-slate-700 font-semibold cursor-not-allowed"
+            />
+          </div>
+        </div>
 
         {/* Período de Vacaciones Gozadas */}
         <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
@@ -305,9 +341,20 @@ export const LaborForm: React.FC<PropsFormularioLaboral> = ({
               <input
                 type="date"
                 min="1970-01-01"
-                max="2099-12-31"
+                max={fechaHoy}
                 value={datos.fechaInicioVacaciones}
-                onChange={(e) => alCambiar({ fechaInicioVacaciones: e.target.value })}
+                onChange={(e) => {
+                  const nuevaFecha = e.target.value;
+                  if (nuevaFecha > fechaHoy) return;
+
+                  const finActualValido = nuevaFecha && datos.fechaFinVacaciones >= nuevaFecha &&
+                    datos.fechaFinVacaciones <= [calcularFechaMaximaVacaciones(nuevaFecha), fechaHoy].sort()[0] &&
+                    contarDiasVacaciones(nuevaFecha, datos.fechaFinVacaciones) <= 15;
+                  alCambiar({
+                    fechaInicioVacaciones: nuevaFecha,
+                    ...(!finActualValido ? { fechaFinVacaciones: '' } : {})
+                  });
+                }}
                 className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#0a2e5c]"
               />
             </div>
@@ -315,10 +362,19 @@ export const LaborForm: React.FC<PropsFormularioLaboral> = ({
               <span className="text-[11px] text-slate-500 block mb-1">Fin vacaciones</span>
               <input
                 type="date"
-                min="1970-01-01"
-                max="2099-12-31"
+                min={datos.fechaInicioVacaciones || '1970-01-01'}
+                max={fechaMaximaVacaciones}
                 value={datos.fechaFinVacaciones}
-                onChange={(e) => alCambiar({ fechaFinVacaciones: e.target.value })}
+                onChange={(e) => {
+                  const nuevaFecha = e.target.value;
+                  if (!nuevaFecha) {
+                    alCambiar({ fechaFinVacaciones: '' });
+                    return;
+                  }
+                  if (!datos.fechaInicioVacaciones || nuevaFecha < datos.fechaInicioVacaciones ||
+                    nuevaFecha > fechaMaximaVacaciones || contarDiasVacaciones(datos.fechaInicioVacaciones, nuevaFecha) > 15) return;
+                  alCambiar({ fechaFinVacaciones: nuevaFecha });
+                }}
                 className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#0a2e5c]"
               />
             </div>
@@ -327,12 +383,12 @@ export const LaborForm: React.FC<PropsFormularioLaboral> = ({
       </div>
 
       {/* 2. CAUSA DE FINALIZACIÓN */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 sm:p-6">
+      <div className="bg-white/85 rounded-2xl border border-slate-200/80 shadow-[0_18px_35px_rgba(15,23,42,0.04)] p-5 sm:p-6 backdrop-blur-sm">
         <div className="flex items-center gap-3 pb-3 mb-4 border-b border-slate-100">
-          <span className="w-6 h-6 rounded-full bg-[#0a2e5c] text-white flex items-center justify-center font-bold text-xs">
+          <span className="w-7 h-7 rounded-full bg-gradient-to-br from-slate-900 to-sky-900 text-white flex items-center justify-center font-bold text-xs shadow-sm">
             2
           </span>
-          <h2 className="text-sm font-extrabold uppercase tracking-wide text-[#0a2e5c]">
+          <h2 className="text-sm font-extrabold uppercase tracking-[0.14em] text-slate-800">
             CAUSA DE FINALIZACIÓN
           </h2>
         </div>
@@ -452,12 +508,12 @@ export const LaborForm: React.FC<PropsFormularioLaboral> = ({
       </div>
 
       {/* 3. AGUINALDO */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 sm:p-6">
+      <div className="bg-white/85 rounded-2xl border border-slate-200/80 shadow-[0_18px_35px_rgba(15,23,42,0.04)] p-5 sm:p-6 backdrop-blur-sm">
         <div className="flex items-center gap-3 pb-3 mb-4 border-b border-slate-100">
-          <span className="w-6 h-6 rounded-full bg-[#0a2e5c] text-white flex items-center justify-center font-bold text-xs">
+          <span className="w-7 h-7 rounded-full bg-gradient-to-br from-slate-900 to-sky-900 text-white flex items-center justify-center font-bold text-xs shadow-sm">
             3
           </span>
-          <h2 className="text-sm font-extrabold uppercase tracking-wide text-[#0a2e5c]">
+          <h2 className="text-sm font-extrabold uppercase tracking-[0.14em] text-slate-800">
             AGUINALDO
           </h2>
         </div>
@@ -475,12 +531,12 @@ export const LaborForm: React.FC<PropsFormularioLaboral> = ({
       </div>
 
       {/* 4. DÍAS DE ASUETO LABORADOS */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 sm:p-6">
+      <div className="bg-white/85 rounded-2xl border border-slate-200/80 shadow-[0_18px_35px_rgba(15,23,42,0.04)] p-5 sm:p-6 backdrop-blur-sm">
         <div className="flex items-center gap-3 pb-3 mb-4 border-b border-slate-100">
-          <span className="w-6 h-6 rounded-full bg-[#0a2e5c] text-white flex items-center justify-center font-bold text-xs">
+          <span className="w-7 h-7 rounded-full bg-gradient-to-br from-slate-900 to-sky-900 text-white flex items-center justify-center font-bold text-xs shadow-sm">
             4
           </span>
-          <h2 className="text-sm font-extrabold uppercase tracking-wide text-[#0a2e5c]">
+          <h2 className="text-sm font-extrabold uppercase tracking-[0.14em] text-slate-800">
             DÍAS DE ASUETO LABORADOS
           </h2>
         </div>

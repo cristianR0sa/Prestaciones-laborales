@@ -23,19 +23,17 @@ export const LiquidationResults: React.FC<PropsResultadosLiquidacion> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       
       {/* 1. TARJETA PRINCIPAL: LIQUIDACIÓN LABORAL */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        {/* Header Bar */}
-        <div className="bg-[#0a2e5c] text-white px-5 py-4">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_18px_35px_rgba(15,23,42,0.06)] overflow-hidden">
+        <div className="bg-gradient-to-r from-slate-900 via-sky-900 to-slate-800 text-white px-5 py-4">
           <h3 className="text-base font-extrabold tracking-tight">Liquidación Laboral</h3>
-          <p className="text-xs text-sky-200/90 font-medium">
+          <p className="text-xs text-slate-200 font-medium">
             Complete el formulario y presione "Calcular"
           </p>
         </div>
 
-        {/* Body */}
         <div className="p-5 sm:p-6">
           {!haCalculado ? (
             /* Estado Inicial / Sin Resultados */
@@ -186,23 +184,22 @@ export const LiquidationResults: React.FC<PropsResultadosLiquidacion> = ({
               </div>
 
               {/* TOTAL CON LA DEDUCCIÓN DEL ISSS Y AFP */}
-              <div className="p-4 bg-[#0a2e5c] text-white rounded-xl shadow-md">
+              <div className="p-4 bg-slate-900 text-white rounded-2xl shadow-[0_15px_30px_rgba(15,23,42,0.15)]">
                 <span className="text-[11px] font-extrabold uppercase tracking-wider text-sky-200 block mb-0.5">
                   TOTAL CON LA DEDUCCIÓN DEL ISSS Y AFP
                 </span>
-                <div className="flex items-baseline justify-between">
-                  <span className="text-xs text-sky-200/80">Monto líquido a pagar</span>
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="text-xs text-slate-300">Monto líquido a pagar</span>
                   <span className="text-2xl font-black font-mono tracking-tight text-white">
                     {formatearMoneda(resultados.totalNeto)}
                   </span>
                 </div>
               </div>
 
-              {/* Botón de Exportar PDF */}
               <button
                 type="button"
                 onClick={descargarPDF}
-                className="w-full flex items-center justify-center gap-2 bg-[#082447] hover:bg-[#061c37] text-white font-bold text-xs py-3 px-4 rounded-xl shadow-sm transition-all"
+                className="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs py-3 px-4 rounded-xl shadow-sm transition-all"
               >
                 <FileDown className="w-4 h-4 text-sky-300" />
                 <span>Exportar PDF del resumen completo</span>
@@ -214,8 +211,8 @@ export const LiquidationResults: React.FC<PropsResultadosLiquidacion> = ({
       </div>
 
       {/* 2. TARJETA INFORMATIVA: ¿QUÉ SE CALCULA? */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 sm:p-6">
-        <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider mb-4">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_18px_35px_rgba(15,23,42,0.04)] p-5 sm:p-6">
+        <h4 className="text-xs font-black text-slate-800 uppercase tracking-[0.18em] mb-4">
           ¿QUÉ SE CALCULA?
         </h4>
 

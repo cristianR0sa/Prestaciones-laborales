@@ -52,19 +52,14 @@ export function App() {
   }, [datos, haCalculado]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#f4f7fb] text-slate-900 font-sans antialiased">
-      {/* Encabezado */}
+    <div className="min-h-screen flex flex-col bg-[radial-gradient(circle_at_top,_#f8fbff_0%,_#eef5ff_28%,_#f6f7fb_100%)] text-slate-900 font-sans antialiased">
       <Header activeTab={pestanaActiva} onTabChange={setPestanaActiva} />
 
-      {/* Contenido Principal */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {pestanaActiva === 'calculator' ? (
-          <div>
-            {/* Cuadrícula de Dos Columnas: Formulario (Izquierda) | Resultados (Derecha) */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-              
-              {/* Columna Izquierda: Formulario (7 Cols) */}
-              <div className="lg:col-span-7 xl:col-span-8">
+          <div className="space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.75fr)_390px] gap-7 items-start">
+              <div className="lg:pr-2 lg:pt-1">
                 <LaborForm
                   datos={datos}
                   resultados={resultados}
@@ -74,29 +69,24 @@ export function App() {
                 />
               </div>
 
-              {/* Columna Derecha: Liquidación & ¿Qué se calcula? (5 Cols) */}
-              <div className="lg:col-span-5 xl:col-span-4 sticky top-6">
+              <div className="lg:sticky lg:top-5 lg:-mt-1">
                 <LiquidationResults
                   datos={datos}
                   resultados={resultados}
                   haCalculado={haCalculado}
                 />
               </div>
-
             </div>
 
-            {/* Secciones Inferiores de Ancho Completo: Base Legal, Asuetos, Fórmulas */}
             <LegalBaseSection />
           </div>
         ) : (
-          /* Pestaña Bloc de Notas */
           <NotesTab />
         )}
       </main>
 
-      {/* Pie de Página */}
-      <footer className="border-t border-slate-200 bg-white py-6 mt-12 text-center text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto px-4">
+      <footer className="border-t border-slate-200/80 bg-white/80 backdrop-blur-sm py-6 mt-12 text-center text-xs text-slate-500">
+        <div className="max-w-6xl mx-auto px-4">
           <p>Calculadora de Prestaciones Laborales · El Salvador — Código de Trabajo</p>
         </div>
       </footer>

@@ -4,8 +4,32 @@
 
 @layer base {
   body {
-    @apply bg-[#f4f7fb] text-slate-900 font-sans min-h-screen;
+    @apply bg-[#f5f7fb] text-slate-900 font-sans min-h-screen;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-image: radial-gradient(circle at top, rgba(125, 211, 252, 0.12), transparent 30%), linear-gradient(180deg, #f8fbff 0%, #f3f6fb 100%);
+  }
+
+  * {
+    @apply box-border;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    font: inherit;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: #94a3b8;
+  }
+
+  input:focus,
+  select:focus,
+  textarea:focus {
+    box-shadow: 0 0 0 3px rgba(125, 211, 252, 0.18);
+    outline: none;
   }
 }
 

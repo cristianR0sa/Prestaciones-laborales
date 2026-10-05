@@ -31,7 +31,6 @@ export const DIAS_ASUETO_OFICIALES: DiaAsueto[] = [
   { id: 'independencia', nombre: 'Independencia de El Salvador', fechaTexto: '15 de septiembre', descripcion: 'Fiesta Cívica Nacional (Art. 190 CT)' },
   { id: 'dia_difuntos', nombre: 'Día de los Difuntos', fechaTexto: '2 de noviembre', descripcion: 'Conmemoración Difuntos (Art. 190 CT)' },
   { id: 'san_miguel_21_nov', nombre: 'Fiestas de San Miguel (Virgen de la Paz)', fechaTexto: '21 de noviembre', descripcion: 'San Miguel — Fiestas Patronales', esSanMiguel: true },
-  { id: 'dia_patronal', nombre: 'Día patronal del municipio', fechaTexto: 'Día principal — según municipio', descripcion: 'Fiestas Patronales Municipales (Art. 190 CT)' },
   { id: 'navidad', nombre: 'Navidad', fechaTexto: '25 de diciembre', descripcion: 'Celebración de Navidad (Art. 190 CT)' },
 ];
 
