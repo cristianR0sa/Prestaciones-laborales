@@ -747,9 +747,11 @@ export const LaborForm: React.FC<PropsFormularioLaboral> = ({
                 <input
                   type="date"
                   min="1970-01-01"
-                  max="2099-12-31"
+                  max={fechaHoy}
                   value={fechaHE}
-                  onChange={(e) => setFechaHE(e.target.value)}
+                  onChange={(e) => {
+                    if (e.target.value <= fechaHoy) setFechaHE(e.target.value);
+                  }}
                   className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-800"
                 />
               </div>
